@@ -12,8 +12,8 @@ struct Constraint {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ConstraintSense {
-    LessThan,
-    GreaterThan,
+    LessEqual,
+    GreaterEqual,
     Equal,
 }
 
@@ -43,8 +43,8 @@ impl ConstrRef {
 impl fmt::Display for ConstrRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let sense = match &self.0.sense {
-            ConstraintSense::LessThan => "<=",
-            ConstraintSense::GreaterThan => ">=",
+            ConstraintSense::LessEqual => "<=",
+            ConstraintSense::GreaterEqual => ">=",
             ConstraintSense::Equal => "=",
         };
         write!(f, "{} {} {}", &self.0.lhs, sense, &self.0.rhs)
