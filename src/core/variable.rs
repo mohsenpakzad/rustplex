@@ -124,11 +124,12 @@ impl Hash for VarRef {
 
 impl fmt::Display for VarRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let variable = self.0.borrow();
-        match &variable.name {
-            Some(name) => write!(f, "{}", name),
-            None => write!(f, "var_{:p}", Rc::as_ptr(&self.0)),
-        }
+        let name_display = match self.get_name() {
+            Some(name) => name.clone(),
+            None => self.get_name_or_default(),
+        };
+
+        write!(f, "Var({})", name_display,)
     }
 }
 
