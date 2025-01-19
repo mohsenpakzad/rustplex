@@ -1,10 +1,13 @@
 use std::fmt;
 
-use crate::core::{
-    constraint::{ConstrRef, ConstraintSense},
-    expression::LinearExpr,
-    objective::{Objective, ObjectiveSense},
-    variable::VarRef,
+use crate::{
+    core::{
+        constraint::{ConstrRef, ConstraintSense},
+        expression::LinearExpr,
+        objective::{Objective, ObjectiveSense},
+        variable::VarRef,
+    },
+    standardization::standard_model::StandardModel,
 };
 
 #[derive(Debug, Default)]
@@ -44,11 +47,9 @@ impl Model {
         self.objective = Some(Objective::new(sense, expression.into()));
     }
 
-    // pub fn solve(&self) -> Result<Vec<f64>, crate::error::LPError> {
-    //     // Implement solver logic here
-    //     // Return the values of all variables in order
-    //     Ok(vec![])
-    // }
+    pub fn to_standard(&self) -> StandardModel {
+        StandardModel::from_model(&self)
+    }
 
     pub fn get_variables(&self) -> &Vec<VarRef> {
         &self.variables
