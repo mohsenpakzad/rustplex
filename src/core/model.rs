@@ -47,4 +47,16 @@ impl Model {
     //     // Return the values of all variables in order
     //     Ok(vec![])
     // }
+
+    pub fn get_variables(&self) -> &Vec<VarRef> {
+        &self.variables
+    }
+
+    pub fn get_constraints(&self) -> &Vec<ConstrRef> {
+        &self.constraints
+    }
+
+    pub fn get_objective(&self) -> &Option<Objective> {
+        &self.objective
+    }
 }
