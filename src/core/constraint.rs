@@ -37,6 +37,18 @@ impl ConstrRef {
         self
     }
 
+    pub fn get_sense(&self) -> ConstraintSense {
+        self.0.sense
+    }
+
+    pub fn get_lhs(&self) -> &LinearExpr<VarRef> {
+        &self.0.lhs
+    }
+
+    pub fn get_rhs(&self) -> &LinearExpr<VarRef> {
+        &self.0.rhs
+    }
+
     fn constraint(&mut self) -> &mut Constraint {
         Rc::make_mut(&mut self.0)
     }
