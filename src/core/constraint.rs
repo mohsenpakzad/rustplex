@@ -68,17 +68,24 @@ impl ConstrRef {
 
 impl fmt::Display for ConstrRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let sense = match &self.0.borrow().sense {
+        let name_display = match self.get_name() {
+            Some(name) => name.clone(),
+            None => self.get_name_or_default(),
+        };
+
+        let sense = match self.get_sense() {
             ConstraintSense::LessEqual => "<=",
             ConstraintSense::GreaterEqual => ">=",
             ConstraintSense::Equal => "=",
         };
+
         write!(
             f,
-            "{} {} {}",
-            &self.0.borrow().lhs,
+            "Constr({}): {} {} {}",
+            name_display,
+            self.get_lhs(),
             sense,
-            &self.0.borrow().rhs
+            self.get_rhs(),
         )
     }
 }
