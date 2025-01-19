@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::core::expression::LinearExpr;
 
 use super::variable::VarRef;
@@ -25,5 +27,16 @@ impl Objective {
 
     pub fn get_expr(&self) -> &LinearExpr<VarRef> {
         &self.expression
+    }
+}
+
+impl fmt::Display for Objective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let sense_str = match self.sense {
+            ObjectiveSense::Minimize => "Minimize",
+            ObjectiveSense::Maximize => "Maximize",
+        };
+
+        write!(f, "{} {}", sense_str, self.expression)
     }
 }
