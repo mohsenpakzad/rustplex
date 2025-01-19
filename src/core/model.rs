@@ -36,10 +36,10 @@ impl Model {
 
     pub fn set_objective(
         &mut self,
-        expression: impl Into<LinearExpr<VarRef>>,
         sense: ObjectiveSense,
+        expression: impl Into<LinearExpr<VarRef>>,
     ) {
-        self.objective = Some(Objective::new(expression.into(), sense));
+        self.objective = Some(Objective::new(sense, expression.into()));
     }
 
     // pub fn solve(&self) -> Result<Vec<f64>, crate::error::LPError> {
