@@ -23,12 +23,16 @@ pub enum ConstraintSense {
 pub struct ConstrRef(Rc<RefCell<Constraint>>);
 
 impl ConstrRef {
-    pub fn new(lhs: LinearExpr<VarRef>, sense: ConstraintSense, rhs: LinearExpr<VarRef>) -> Self {
+    pub fn new(
+        lhs: impl Into<LinearExpr<VarRef>>,
+        sense: ConstraintSense,
+        rhs: impl Into<LinearExpr<VarRef>>,
+    ) -> Self {
         Self(Rc::new(RefCell::new(Constraint {
             name: None,
-            lhs,
+            lhs: lhs.into(),
             sense,
-            rhs,
+            rhs: rhs.into(),
         })))
     }
 
