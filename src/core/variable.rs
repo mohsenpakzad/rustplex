@@ -108,3 +108,7 @@ impl fmt::Display for VarRef {
         }
     }
 }
+
+impl ExprVariable for VarRef {}
+
+impl_expr_ops!(VarRef, [f64, f32, i8, i16, i32, i64, i128, isize]);
