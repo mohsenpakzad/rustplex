@@ -36,12 +36,12 @@ impl<T: ExprVariable> LinearExpr<T> {
         Self { terms, constant }
     }
 
-    pub fn add_term(&mut self, var: T, coefficient: f64) {
-        *self.terms.entry(var).or_insert(0.0) += coefficient;
-    }
-
     pub fn get_coefficient(&self, var: &T) -> f64 {
         *self.terms.get(var).unwrap_or(&0.0)
+    }
+
+    pub fn add_term(&mut self, var: T, coefficient: f64) {
+        *self.terms.entry(var).or_insert(0.0) += coefficient;
     }
 
     pub fn scale(&mut self, scalar: f64) {
