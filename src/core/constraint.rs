@@ -2,12 +2,14 @@ use std::{fmt, rc::Rc};
 
 use crate::core::expression::LinearExpr;
 
+use super::variable::VarRef;
+
 #[derive(Debug, Clone)]
 struct Constraint {
     name: Option<String>,
-    lhs: LinearExpr,
+    lhs: LinearExpr<VarRef>,
     sense: ConstraintSense,
-    rhs: LinearExpr,
+    rhs: LinearExpr<VarRef>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -21,7 +23,7 @@ pub enum ConstraintSense {
 pub struct ConstrRef(Rc<Constraint>);
 
 impl ConstrRef {
-    pub fn new(lhs: LinearExpr, sense: ConstraintSense, rhs: LinearExpr) -> Self {
+    pub fn new(lhs: LinearExpr<VarRef>, sense: ConstraintSense, rhs: LinearExpr<VarRef>) -> Self {
         Self(Rc::new(Constraint {
             name: None,
             lhs,

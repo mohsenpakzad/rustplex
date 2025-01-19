@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Sub};
-
-use crate::core::variable::VarRef;
+use std::hash::Hash;
 
 #[derive(Debug, Clone)]
-pub struct LinearExpr {
-    pub terms: HashMap<VarRef, f64>,
+pub struct LinearExpr<T: ExprVariable> {
+    pub terms: HashMap<T, f64>,
     pub constant: f64,
 }
 
-impl LinearExpr {
+pub trait ExprVariable: Clone + Hash + Eq + fmt::Display {}
+
+impl<T: ExprVariable> LinearExpr<T> {
     pub fn new() -> Self {
         Self {
             terms: HashMap::new(),
@@ -18,7 +18,7 @@ impl LinearExpr {
         }
     }
 
-    pub fn with_terms(terms: HashMap<VarRef, f64>) -> Self {
+    pub fn with_terms(terms: HashMap<T, f64>) -> Self {
         Self {
             terms,
             constant: 0.0,
@@ -32,15 +32,15 @@ impl LinearExpr {
         }
     }
 
-    pub fn with_terms_and_constant(terms: HashMap<VarRef, f64>, constant: f64) -> Self {
+    pub fn with_terms_and_constant(terms: HashMap<T, f64>, constant: f64) -> Self {
         Self { terms, constant }
     }
 
-    pub fn add_term(&mut self, var: VarRef, coefficient: f64) {
+    pub fn add_term(&mut self, var: T, coefficient: f64) {
         *self.terms.entry(var).or_insert(0.0) += coefficient;
     }
 
-    pub fn get_coefficient(&self, var: &VarRef) -> f64 {
+    pub fn get_coefficient(&self, var: &T) -> f64 {
         *self.terms.get(var).unwrap_or(&0.0)
     }
 
@@ -52,242 +52,312 @@ impl LinearExpr {
     }
 }
 
-impl fmt::Display for LinearExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut first = true;
-        for (var, &coeff) in &self.terms {
-            if !first && coeff >= 0.0 {
-                write!(f, " + ")?;
+macro_rules! impl_expr_ops {
+    ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
+        use std::collections::HashMap;
+        use std::ops::{Add, Div, Mul, Neg, Sub};
+        use crate::core::expression::LinearExpr;
+
+
+        impl fmt::Display for LinearExpr<$var_type> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let mut first = true;
+                for (var, &coeff) in &self.terms {
+                    if !first && coeff >= 0.0 {
+                        write!(f, " + ")?;
+                    }
+                    if coeff == -1.0 {
+                        write!(f, " - ")?;
+                    } else if coeff != 1.0 {
+                        write!(f, "{}", coeff)?;
+                    }
+                    write!(f, "{}", var)?;
+                    first = false;
+                }
+                if self.constant != 0.0 || first {
+                    if !first && self.constant >= 0.0 {
+                        write!(f, " + ")?;
+                    }
+                    write!(f, "{}", self.constant)?;
+                }
+                Ok(())
             }
-            if coeff == -1.0 {
-                write!(f, " - ")?;
-            } else if coeff != 1.0 {
-                write!(f, "{}", coeff)?;
+        }
+
+        // Implement From<ExprVariable> for LinearExpr
+        impl From<$var_type> for LinearExpr<$var_type> {
+            fn from(var: $var_type) -> Self {
+                let mut terms = HashMap::new();
+                terms.insert(var, 1.0);
+                LinearExpr::with_terms(terms)
             }
-            write!(f, "{}", var)?;
-            first = false;
         }
-        if self.constant != 0.0 || first {
-            if !first && self.constant >= 0.0 {
-                write!(f, " + ")?;
+
+        // ExprVariable + ExprVariable
+        impl Add for $var_type {
+            type Output = LinearExpr<$var_type>;
+
+            fn add(self, other: Self) -> LinearExpr<$var_type> {
+                let mut terms = HashMap::new();
+                terms.insert(self, 1.0);
+                terms.insert(other, 1.0);
+                LinearExpr::with_terms(terms)
             }
-            write!(f, "{}", self.constant)?;
         }
-        Ok(())
-    }
-}
 
-// Implement From<VarRef> for LinearExpr to handle direct conversion
-impl From<VarRef> for LinearExpr {
-    fn from(var: VarRef) -> Self {
-        let mut terms = HashMap::new();
-        terms.insert(var, 1.0);
-        LinearExpr::with_terms(terms)
-    }
-}
+        // ExprVariable - ExprVariable
+        impl Sub for $var_type {
+            type Output = LinearExpr<$var_type>;
 
-// Implement Add for VarRef + VarRef
-impl Add for VarRef {
-    type Output = LinearExpr;
-
-    fn add(self, other: Self) -> LinearExpr {
-        let mut terms = HashMap::new();
-        terms.insert(self, 1.0);
-        terms.insert(other, 1.0);
-        LinearExpr::with_terms(terms)
-    }
-}
-
-// VarRef + LinearExpr
-impl Add<LinearExpr> for VarRef {
-    type Output = LinearExpr;
-
-    fn add(self, mut expr: LinearExpr) -> LinearExpr {
-        expr.add_term(self, 1.0);
-        expr
-    }
-}
-
-// LinearExpr + VarRef
-impl Add<VarRef> for LinearExpr {
-    type Output = LinearExpr;
-
-    fn add(mut self, var: VarRef) -> LinearExpr {
-        self.add_term(var, 1.0);
-        self
-    }
-}
-
-// Implement Add for LinearExpr + LinearExpr
-impl Add for LinearExpr {
-    type Output = Self;
-
-    fn add(mut self, other: Self) -> Self {
-        for (var, coeff) in other.terms {
-            *self.terms.entry(var).or_insert(0.0) += coeff;
+            fn sub(self, other: Self) -> LinearExpr<$var_type> {
+                let mut terms = HashMap::new();
+                terms.insert(self, 1.0);
+                terms.insert(other, -1.0);
+                LinearExpr::with_terms(terms)
+            }
         }
-        self.constant += other.constant;
-        self
-    }
-}
 
-// Implement Add for LinearExpr - LinearExpr
-impl Sub for LinearExpr {
-    type Output = Self;
+        // -ExprVariable
+        impl Neg for $var_type {
+            type Output = LinearExpr<$var_type>;
 
-    fn sub(mut self, other: Self) -> Self {
-        for (var, coeff) in other.terms {
-            *self.terms.entry(var).or_insert(0.0) -= coeff;
+            fn neg(self) -> LinearExpr<$var_type> {
+                let mut terms = HashMap::new();
+                terms.insert(self, -1.0);
+                LinearExpr::with_terms(terms)
+            }
         }
-        self.constant -= other.constant;
-        self
-    }
-}
 
-// Implement Neg for - LinearExpr
-impl Neg for LinearExpr {
-    type Output = Self;
+        // ExprVariable + LinearExpr
+        impl Add<LinearExpr<$var_type>> for $var_type {
+            type Output = LinearExpr<$var_type>;
 
-    fn neg(mut self) -> Self {
-        for coeff in self.terms.values_mut() {
-            *coeff = -*coeff;
+            fn add(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                expr.add_term(self, 1.0);
+                expr
+            }
         }
-        self.constant = -self.constant;
-        self
-    }
-}
 
-macro_rules! impl_ops {
-    ($($type:ty),*) => {
+        // ExprVariable - LinearExpr
+        impl Sub<LinearExpr<$var_type>> for $var_type {
+            type Output = LinearExpr<$var_type>;
+
+            fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                -expr + self
+            }
+        }
+
+        // LinearExpr + ExprVariable
+        impl Add<$var_type> for LinearExpr<$var_type> {
+            type Output = LinearExpr<$var_type>;
+
+            fn add(mut self, var: $var_type) -> LinearExpr<$var_type> {
+                self.add_term(var, 1.0);
+                self
+            }
+        }
+
+        // LinearExpr - ExprVariable
+        impl Sub<$var_type> for LinearExpr<$var_type> {
+            type Output = LinearExpr<$var_type>;
+
+            fn sub(mut self, var: $var_type) -> LinearExpr<$var_type> {
+                self.add_term(var, -1.0);
+                self
+            }
+        }
+
+        // LinearExpr + LinearExpr
+        impl Add for LinearExpr<$var_type> {
+            type Output = Self;
+
+            fn add(mut self, other: Self) -> Self {
+                for (var, coeff) in other.terms {
+                    *self.terms.entry(var).or_insert(0.0) += coeff;
+                }
+                self.constant += other.constant;
+                self
+            }
+        }
+
+        // LinearExpr - LinearExpr
+        impl Sub for LinearExpr<$var_type> {
+            type Output = Self;
+
+            fn sub(mut self, other: Self) -> Self {
+                for (var, coeff) in other.terms {
+                    *self.terms.entry(var).or_insert(0.0) -= coeff;
+                }
+                self.constant -= other.constant;
+                self
+            }
+        }
+
+        // -LinearExpr
+        impl Neg for LinearExpr<$var_type> {
+            type Output = Self;
+
+            fn neg(mut self) -> Self {
+                for coeff in self.terms.values_mut() {
+                    *coeff = -*coeff;
+                }
+                self.constant = -self.constant;
+                self
+            }
+        }
+
         $(
-            impl From<$type> for LinearExpr {
-                fn from(constant: $type) -> Self {
+            // From<numeric> for LinearExpr
+            impl From<$num_type> for LinearExpr<$var_type> {
+                fn from(constant: $num_type) -> Self {
                     LinearExpr::with_constant(constant as f64)
                 }
             }
 
-            // Implement Add for VarRef + $type
-            impl Add<$type> for VarRef {
-                type Output = LinearExpr;
+            // ExprVariable + numeric
+            impl Add<$num_type> for $var_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn add(self, constant: $type) -> LinearExpr {
+                fn add(self, constant: $num_type) -> LinearExpr<$var_type> {
                     let mut terms = HashMap::new();
                     terms.insert(self, 1.0);
                     LinearExpr::with_terms_and_constant(terms, constant as f64)
                 }
             }
 
-            // Implement Add for $type + VarRef
-            impl Add<VarRef> for $type {
-                type Output = LinearExpr;
+            // numeric + ExprVariable
+            impl Add<$var_type> for $num_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn add(self, var: VarRef) -> LinearExpr {
+                fn add(self, var: $var_type) -> LinearExpr<$var_type> {
                     var + self
                 }
             }
 
-            // Implement Sub for VarRef - $type
-            impl Sub<$type> for VarRef {
-                type Output = LinearExpr;
+            // ExprVariable - numeric
+            impl Sub<$num_type> for $var_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn sub(self, constant: $type) -> LinearExpr {
+                fn sub(self, constant: $num_type) -> LinearExpr<$var_type> {
                     let mut terms = HashMap::new();
                     terms.insert(self, 1.0);
-                    LinearExpr::with_terms_and_constant(terms, -constant as f64)
+                    LinearExpr::with_terms_and_constant(terms, -(constant as f64))
                 }
             }
 
-            // Implement Sub for $type - VarRef
-            impl Sub<VarRef> for $type {
-                type Output = LinearExpr;
+            // numeric - ExprVariable
+            impl Sub<$var_type> for $num_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn sub(self, var: VarRef) -> LinearExpr {
-                    var - self
-                }
-            }
-
-            // Implement Mul for VarRef * $type
-            impl Mul<$type> for VarRef {
-                type Output = LinearExpr;
-
-                fn mul(self, coeff: $type) -> LinearExpr {
+                fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
                     let mut terms = HashMap::new();
-                    terms.insert(self, coeff as f64);
+                    terms.insert(var, -1.0);
+                    LinearExpr::with_terms_and_constant(terms, self as f64)
+                }
+            }
+
+            // ExprVariable * numeric
+            impl Mul<$num_type> for $var_type {
+                type Output = LinearExpr<$var_type>;
+
+                fn mul(self, constant: $num_type) -> LinearExpr<$var_type> {
+                    let mut terms = HashMap::new();
+                    terms.insert(self, constant as f64);
                     LinearExpr::with_terms(terms)
                 }
             }
 
-            // Implement Mul for $type * VarRef
-            impl Mul<VarRef> for $type {
-                type Output = LinearExpr;
+            // numeric * ExprVariable
+            impl Mul<$var_type> for $num_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn mul(self, var: VarRef) -> LinearExpr {
+                fn mul(self, var: $var_type) -> LinearExpr<$var_type> {
                     var * self
                 }
             }
 
-            // Implement Div for VarRef / $type
-            impl Div<$type> for VarRef {
-                type Output = LinearExpr;
+            // ExprVariable / numeric
+            impl Div<$num_type> for $var_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn div(self, coeff: $type) -> LinearExpr {
+                fn div(self, constant: $num_type) -> LinearExpr<$var_type> {
                     let mut terms = HashMap::new();
-                    terms.insert(self, 1.0 / coeff as f64);
+                    terms.insert(self, 1.0 / (constant as f64));
                     LinearExpr::with_terms(terms)
                 }
             }
 
-            // Implement Div for $type / LinearExpr
-            impl Div<VarRef> for $type {
-                type Output = LinearExpr;
-
-                fn div(self, var: VarRef) -> LinearExpr {
-                    var / self
-                }
-            }
-
-            // Implement Add for LinearExpr + $type
-            impl Add<$type> for LinearExpr {
+            // LinearExpr + numeric
+            impl Add<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
 
-                fn add(mut self, constant: $type) -> Self {
+                fn add(mut self, constant: $num_type) -> Self {
                     self.constant += constant as f64;
                     self
                 }
             }
 
-            // Implement Add for $type + LinearExpr
-            impl Add<LinearExpr> for $type {
-                type Output = LinearExpr;
+            // numeric + LinearExpr
+            impl Add<LinearExpr<$var_type>> for $num_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn add(self, mut expr: LinearExpr) -> LinearExpr {
+                fn add(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
                     expr.constant += self as f64;
                     expr
                 }
             }
 
-            // Implement Sub for LinearExpr - $type
-            impl Sub<$type> for LinearExpr {
+            // LinearExpr - numeric
+            impl Sub<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
 
-                fn sub(mut self, constant: $type) -> Self {
+                fn sub(mut self, constant: $num_type) -> Self {
                     self.constant -= constant as f64;
                     self
                 }
             }
 
-            // Implement Sub for $type - LinearExpr
-            impl Sub<LinearExpr> for $type {
-                type Output = LinearExpr;
+            // numeric - LinearExpr
+            impl Sub<LinearExpr<$var_type>> for $num_type {
+                type Output = LinearExpr<$var_type>;
 
-                fn sub(self, mut expr: LinearExpr) -> LinearExpr {
-                    expr = -expr;
-                    expr.constant += self as f64;
-                    expr
+                fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                    -expr + self
+                }
+            }
+
+            // LinearExpr * numeric
+            impl Mul<$num_type> for LinearExpr<$var_type> {
+                type Output = Self;
+
+                fn mul(mut self, constant: $num_type) -> Self {
+                    for coeff in self.terms.values_mut() {
+                        *coeff *= constant as f64;
+                    }
+                    self.constant *= constant as f64;
+                    self
+                }
+            }
+
+            // numeric * LinearExpr
+            impl Mul<LinearExpr<$var_type>> for $num_type {
+                type Output = LinearExpr<$var_type>;
+
+                fn mul(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                    expr * self
+                }
+            }
+
+            // LinearExpr / numeric
+            impl Div<$num_type> for LinearExpr<$var_type> {
+                type Output = Self;
+
+                fn div(self, constant: $num_type) -> Self {
+                    self * (1.0 / constant as f64)
                 }
             }
         )*
     };
 }
 
-impl_ops!(f64, f32, i8, i16, i32, i64, i128, isize);
+pub(crate) use impl_expr_ops;

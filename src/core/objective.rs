@@ -1,8 +1,10 @@
 use crate::core::expression::LinearExpr;
 
+use super::variable::VarRef;
+
 #[derive(Debug, Clone)]
 pub struct Objective {
-    pub expression: LinearExpr,
+    pub expression: LinearExpr<VarRef>,
     pub sense: ObjectiveSense,
 }
 
@@ -13,15 +15,15 @@ pub enum ObjectiveSense {
 }
 
 impl Objective {
-    pub fn new(expression: LinearExpr, sense: ObjectiveSense) -> Self {
+    pub fn new(expression: LinearExpr<VarRef>, sense: ObjectiveSense) -> Self {
         Self { expression, sense }
     }
 
-    pub fn minimize(expression: LinearExpr) -> Self {
+    pub fn minimize(expression: LinearExpr<VarRef>) -> Self {
         Self::new(expression, ObjectiveSense::Minimize)
     }
 
-    pub fn maximize(expression: LinearExpr) -> Self {
+    pub fn maximize(expression: LinearExpr<VarRef>) -> Self {
         Self::new(expression, ObjectiveSense::Maximize)
     }
 }

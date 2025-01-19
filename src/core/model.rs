@@ -25,16 +25,20 @@ impl Model {
 
     pub fn add_constraint(
         &mut self,
-        lhs: impl Into<LinearExpr>,
+        lhs: impl Into<LinearExpr<VarRef>>,
         sense: ConstraintSense,
-        rhs: impl Into<LinearExpr>,
+        rhs: impl Into<LinearExpr<VarRef>>,
     ) -> ConstrRef {
         let constr = ConstrRef::new(lhs.into(), sense, rhs.into());
         self.constraints.push(constr.clone());
         constr
     }
 
-    pub fn set_objective(&mut self, expression: impl Into<LinearExpr>, sense: ObjectiveSense) {
+    pub fn set_objective(
+        &mut self,
+        expression: impl Into<LinearExpr<VarRef>>,
+        sense: ObjectiveSense,
+    ) {
         self.objective = Some(Objective::new(expression.into(), sense));
     }
 
