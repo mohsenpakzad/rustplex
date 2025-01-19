@@ -83,6 +83,18 @@ impl VarRef {
         self
     }
 
+    pub fn get_name(&self) -> Option<String> {
+        self.0.borrow().name.clone()
+    }
+
+    pub fn get_name_or_default(&self) -> String {
+        self.0
+            .borrow()
+            .name
+            .clone()
+            .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
+    }
+
     pub fn get_type(&self) -> VariableType {
         self.0.borrow().var_type.clone()
     }
