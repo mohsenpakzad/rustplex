@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::core::{
     constraint::{ConstrRef, ConstraintSense},
     expression::LinearExpr,
@@ -58,5 +60,35 @@ impl Model {
 
     pub fn get_objective(&self) -> &Option<Objective> {
         &self.objective
+    }
+}
+
+impl fmt::Display for Model {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Display the objective, if it exists
+        match &self.objective {
+            Some(objective) => {
+                writeln!(f, "Objective: {}", objective)?;
+            }
+            None => {
+                writeln!(f, "Objective: None")?;
+            }
+        }
+
+        // Display the constraints
+        writeln!(f, "Constraints: [")?;
+        for constr in self.constraints.iter() {
+            writeln!(f, "\t{},", constr)?;
+        }
+        writeln!(f, "]")?;
+
+        // Display the variables
+        writeln!(f, "Variables: [")?;
+        for var in self.variables.iter() {
+            writeln!(f, "\t{},", var)?;
+        }
+        write!(f, "]")?;
+
+        Ok(())
     }
 }
