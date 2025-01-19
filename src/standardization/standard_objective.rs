@@ -6,7 +6,7 @@ use super::standard_variable::StdVarRef;
 
 #[derive(Debug, Clone)]
 pub struct StandardObjective {
-    pub expression: LinearExpr<StdVarRef>,
+    expression: LinearExpr<StdVarRef>,
 }
 
 impl StandardObjective {
@@ -21,6 +21,10 @@ impl StandardObjective {
                 ObjectiveSense::Maximize => expression,
             },
         }
+    }
+
+    pub fn get_expr(&self) -> &LinearExpr<StdVarRef> {
+        &self.expression
     }
 }
 
