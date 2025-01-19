@@ -58,28 +58,57 @@ macro_rules! impl_expr_ops {
         use std::ops::{Add, Div, Mul, Neg, Sub};
         use crate::core::expression::LinearExpr;
 
-
         impl fmt::Display for LinearExpr<$var_type> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 let mut first = true;
-                for (var, &coeff) in &self.terms {
-                    if !first && coeff >= 0.0 {
-                        write!(f, " + ")?;
+
+                for (var, &coefficient) in &self.terms {
+
+                    // Skip zero coefficients
+                    if coefficient == 0.0 {
+                        continue;
                     }
-                    if coeff == -1.0 {
-                        write!(f, " - ")?;
-                    } else if coeff != 1.0 {
-                        write!(f, "{}", coeff)?;
+
+                    // Print the sign if needed (based on first or not)
+                    if !first {
+                        if coefficient > 0.0 {
+                            write!(f, " + ")?;
+                        } else {
+                            write!(f, " - ")?;
+                        }
                     }
+
+                    // Formatting the coefficient (with limited precision for readability)
+                    let coefficient_str = match coefficient {
+                        1.0 | -1.0 => String::new(), // Omit '1' in case of a coefficient of 1 or -1
+                        _ =>  format!("{:.2} *", coefficient.abs()) // Limit to 2 decimal places
+                    };
+
+                    // If the coefficient is not 0 or 1 or -1, print the coefficient followed by a space and the variable
+                    if coefficient != 1.0 && coefficient != -1.0 {
+                        write!(f, "{} ", coefficient_str)?;
+                    } else {
+                        write!(f, "{}", coefficient_str)?; // No space if it's just '1' or '-1'
+                    }
+
+                    // Print the variable
                     write!(f, "{}", var)?;
+
                     first = false;
                 }
+
+                // Handle constant term
                 if self.constant != 0.0 || first {
-                    if !first && self.constant >= 0.0 {
-                        write!(f, " + ")?;
+                    if !first {
+                        if self.constant > 0.0 {
+                            write!(f, " + ")?;
+                        } else {
+                            write!(f, " - ")?;
+                        }
                     }
-                    write!(f, "{}", self.constant)?;
+                    write!(f, "{:.2}", self.constant)?;
                 }
+
                 Ok(())
             }
         }
