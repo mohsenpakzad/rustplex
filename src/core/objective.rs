@@ -4,8 +4,8 @@ use super::variable::VarRef;
 
 #[derive(Debug, Clone)]
 pub struct Objective {
-    pub expression: LinearExpr<VarRef>,
-    pub sense: ObjectiveSense,
+    sense: ObjectiveSense,
+    expression: LinearExpr<VarRef>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -15,8 +15,8 @@ pub enum ObjectiveSense {
 }
 
 impl Objective {
-    pub fn new(expression: LinearExpr<VarRef>, sense: ObjectiveSense) -> Self {
-        Self { expression, sense }
+    pub fn new(sense: ObjectiveSense, expression: LinearExpr<VarRef>) -> Self {
+        Self { sense, expression }
     }
 
     pub fn get_sense(&self) -> &ObjectiveSense {
