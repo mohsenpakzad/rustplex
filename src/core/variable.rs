@@ -1,13 +1,16 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+use super::expression::{impl_expr_ops, ExprVariable};
+
+#[derive(Debug)]
 struct Variable {
     name: Option<String>,
     var_type: VariableType,
-    lower_bound: f64,
-    upper_bound: f64,
+    bounds: RangeInclusive<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -22,67 +25,74 @@ impl Default for Variable {
         Self {
             name: None,
             var_type: VariableType::Continuous,
-            lower_bound: f64::NEG_INFINITY,
-            upper_bound: f64::INFINITY,
+            bounds: f64::NEG_INFINITY..=f64::INFINITY,
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct VarRef(Rc<Variable>);
+#[derive(Debug, Clone, Default)]
+pub struct VarRef(Rc<RefCell<Variable>>);
 
 impl VarRef {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.variable().name = Some(name.into());
+    pub fn name(self, name: impl Into<String>) -> Self {
+        self.0.borrow_mut().name = Some(name.into());
         self
     }
 
-    pub fn continuous(mut self) -> Self {
-        self.variable().var_type = VariableType::Continuous;
+    pub fn continuous(self) -> Self {
+        self.0.borrow_mut().var_type = VariableType::Continuous;
         self
     }
 
-    pub fn integer(mut self) -> Self {
-        self.variable().var_type = VariableType::Integer;
+    pub fn integer(self) -> Self {
+        self.0.borrow_mut().var_type = VariableType::Integer;
         self
     }
 
-    pub fn binary(mut self) -> Self {
-        let var = self.variable();
-        var.var_type = VariableType::Binary;
-        var.lower_bound = 0.0;
-        var.upper_bound = 1.0;
+    pub fn binary(self) -> Self {
+        {
+            let mut var = self.0.borrow_mut();
+            var.var_type = VariableType::Binary;
+            var.bounds = 0.0..=1.0;
+        }
         self
     }
 
-    pub fn lower_bound(mut self, lb: f64) -> Self {
-        self.variable().lower_bound = lb;
+    pub fn bounds(self, bounds: RangeInclusive<f64>) -> Self {
+        self.0.borrow_mut().bounds = bounds;
         self
     }
 
-    pub fn upper_bound(mut self, ub: f64) -> Self {
-        self.variable().upper_bound = ub;
+    pub fn lower_bound(self, lb: f64) -> Self {
+        {
+            let mut var: std::cell::RefMut<'_, Variable> = self.0.borrow_mut();
+            var.bounds = lb..=*var.bounds.end()
+        }
         self
     }
 
-    pub fn bounds(mut self, lb: f64, ub: f64) -> Self {
-        self.variable().lower_bound = lb;
-        self.variable().upper_bound = ub;
+    pub fn upper_bound(self, ub: f64) -> Self {
+        {
+            let mut var: std::cell::RefMut<'_, Variable> = self.0.borrow_mut();
+            var.bounds = *var.bounds.start()..=ub;
+        }
         self
     }
 
-    fn variable(&mut self) -> &mut Variable {
-        Rc::make_mut(&mut self.0)
+    pub fn get_type(&self) -> VariableType {
+        self.0.borrow().var_type.clone()
     }
-}
 
-impl Default for VarRef {
-    fn default() -> Self {
-        Self(Rc::new(Variable::default()))
+    pub fn get_lower_bound(&self) -> f64 {
+        *self.0.borrow().bounds.start()
+    }
+
+    pub fn get_upper_bound(&self) -> f64 {
+        *self.0.borrow().bounds.end()
     }
 }
 
@@ -102,7 +112,8 @@ impl Hash for VarRef {
 
 impl fmt::Display for VarRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.0.name {
+        let variable = self.0.borrow();
+        match &variable.name {
             Some(name) => write!(f, "{}", name),
             None => write!(f, "var_{:p}", Rc::as_ptr(&self.0)),
         }
