@@ -19,11 +19,11 @@ impl Objective {
         Self { expression, sense }
     }
 
-    pub fn minimize(expression: LinearExpr<VarRef>) -> Self {
-        Self::new(expression, ObjectiveSense::Minimize)
+    pub fn get_sense(&self) -> &ObjectiveSense {
+        &self.sense
     }
 
-    pub fn maximize(expression: LinearExpr<VarRef>) -> Self {
-        Self::new(expression, ObjectiveSense::Maximize)
+    pub fn get_expr(&self) -> &LinearExpr<VarRef> {
+        &self.expression
     }
 }
