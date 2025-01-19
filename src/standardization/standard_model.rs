@@ -16,10 +16,10 @@ use super::{
 /// A model that enforces standard form constraints
 #[derive(Debug)]
 pub struct StandardModel {
-    pub variables: Vec<StdVarRef>,
-    pub constraints: Vec<StdConstrRef>,
-    pub objective: Option<StandardObjective>,
-    pub variable_map: Option<VariableMap>,
+    variables: Vec<StdVarRef>,
+    constraints: Vec<StdConstrRef>,
+    objective: Option<StandardObjective>,
+    variable_map: Option<VariableMap>,
 }
 
 type VariableMap = HashMap<VarRef, (Option<StdVarRef>, Option<StdVarRef>)>;
@@ -99,6 +99,18 @@ impl StandardModel {
     /// Set the maximization objective
     pub fn set_objective(&mut self, expression: LinearExpr<StdVarRef>) {
         self.objective = Some(StandardObjective::new(expression));
+    }
+
+    pub fn get_variables(&self) -> &Vec<StdVarRef> {
+        &self.variables
+    }
+
+    pub fn get_constraints(&self) -> &Vec<StdConstrRef> {
+        &self.constraints
+    }
+
+    pub fn get_objective(&self) -> &Option<StandardObjective> {
+        &self.objective
     }
 
     /// Standardize a variable into standard form (non-negative variables)
