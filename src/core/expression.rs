@@ -287,6 +287,15 @@ macro_rules! impl_expr_ops {
                 }
             }
 
+            // numeric / ExprVariable
+            impl Div<$var_type> for $num_type {
+                type Output = LinearExpr<$var_type>;
+
+                fn div(self, var: $var_type) -> LinearExpr<$var_type> {
+                    var / self
+                }
+            }
+
             // LinearExpr + numeric
             impl Add<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
@@ -354,6 +363,15 @@ macro_rules! impl_expr_ops {
 
                 fn div(self, constant: $num_type) -> Self {
                     self * (1.0 / constant as f64)
+                }
+            }
+
+            // numeric / LinearExpr
+            impl Div<LinearExpr<$var_type>> for $num_type {
+                type Output = LinearExpr<$var_type>;
+
+                fn div(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                    expr / self
                 }
             }
         )*
