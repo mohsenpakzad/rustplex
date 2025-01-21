@@ -44,6 +44,40 @@ impl<T: ExprVariable> LinearExpr<T> {
         *self.terms.entry(var).or_insert(0.0) += coefficient;
     }
 
+    pub fn remove_term(&mut self, var: &T) -> Option<f64> {
+        self.terms.remove(var)
+    }
+
+    pub fn add_expr(&mut self, other: &Self) {
+        for (var, &coefficient) in &other.terms {
+            self.add_term(var.clone(), coefficient);
+        }
+        self.constant += other.constant;
+    }
+
+    pub fn sub_expr(&mut self, other: &Self) {
+        for (var, coefficient) in &other.terms {
+            self.add_term(var.clone(), -coefficient);
+        }
+        self.constant -= other.constant;
+    }
+
+    pub fn replace_var_with_expr(
+        &mut self,
+        var: T,
+        replacement_expr: &LinearExpr<T>,
+    ) -> Option<f64> {
+        if let Some(coefficient) = self.remove_term(&var) {
+            let mut replacement_scaled = replacement_expr.clone();
+            replacement_scaled.scale(coefficient);
+
+            self.add_expr(&replacement_scaled);
+            Some(coefficient)
+        } else {
+            None
+        }
+    }
+
     pub fn scale(&mut self, scalar: f64) {
         for coeff in self.terms.values_mut() {
             *coeff *= scalar;
@@ -304,7 +338,7 @@ macro_rules! impl_expr_ops {
 
             // 13. LinearExpr + numeric
             impl Add<$num_type> for LinearExpr<$var_type> {
-            type Output = Self;
+                type Output = Self;
 
                 fn add(mut self, constant: $num_type) -> Self {
                     self.constant += constant as f64;
@@ -319,12 +353,12 @@ macro_rules! impl_expr_ops {
                 fn add(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
                     expr.constant += self as f64;
                     expr
+                }
             }
-        }
 
             // 15. LinearExpr - numeric
             impl Sub<$num_type> for LinearExpr<$var_type> {
-            type Output = Self;
+                type Output = Self;
 
                 fn sub(mut self, constant: $num_type) -> Self {
                     self.constant -= constant as f64;
@@ -338,21 +372,21 @@ macro_rules! impl_expr_ops {
 
                 fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
                     -expr + self
+                }
             }
-        }
 
             // 17. LinearExpr * numeric
             impl Mul<$num_type> for LinearExpr<$var_type> {
-            type Output = Self;
+                type Output = Self;
 
                 fn mul(mut self, constant: $num_type) -> Self {
-                for coeff in self.terms.values_mut() {
+                    for coeff in self.terms.values_mut() {
                         *coeff *= constant as f64;
-                }
+                    }
                     self.constant *= constant as f64;
-                self
+                    self
+                }
             }
-        }
 
             // 18. numeric * LinearExpr
             impl Mul<LinearExpr<$var_type>> for $num_type {
