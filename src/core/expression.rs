@@ -52,18 +52,13 @@ impl<T: ExprVariable> LinearExpr<T> {
     }
 }
 
-macro_rules! impl_expr_ops {
-    ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
-        use std::collections::HashMap;
-        use std::ops::{Add, Div, Mul, Neg, Sub};
-        use crate::core::expression::LinearExpr;
-
+macro_rules! impl_expr_display {
+    ($var_type:ty) => {
         impl fmt::Display for LinearExpr<$var_type> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 let mut first = true;
 
                 for (var, &coefficient) in &self.terms {
-
                     // Skip zero coefficients
                     if coefficient == 0.0 {
                         continue;
@@ -80,8 +75,22 @@ macro_rules! impl_expr_ops {
 
                     // Formatting the coefficient (with limited precision for readability)
                     let coefficient_str = match coefficient {
-                        1.0 | -1.0 => String::new(), // Omit '1' in case of a coefficient of 1 or -1
-                        _ =>  format!("{:.2} *", coefficient.abs()) // Limit to 2 decimal places
+                        1.0 => String::new(),
+                        -1.0 => {
+                            if first {
+                                String::from("-")
+                            } else {
+                                String::new()
+                            }
+                        }
+                        _ => format!(
+                            "{:.2} *",
+                            if first {
+                                coefficient
+                            } else {
+                                coefficient.abs()
+                            }
+                        ), // Limit to 2 decimal places
                     };
 
                     // If the coefficient is not 0 or 1 or -1, print the coefficient followed by a space and the variable
@@ -106,12 +115,28 @@ macro_rules! impl_expr_ops {
                             write!(f, " - ")?;
                         }
                     }
-                    write!(f, "{:.2}", self.constant)?;
+                    write!(
+                        f,
+                        "{:.2}",
+                        if first {
+                            self.constant
+                        } else {
+                            self.constant.abs()
+                        }
+                    )?;
                 }
 
                 Ok(())
             }
         }
+    };
+}
+
+macro_rules! impl_expr_ops {
+    ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
+        use std::collections::HashMap;
+        use std::ops::{Add, Div, Mul, Neg, Sub};
+        use crate::core::expression::LinearExpr;
 
         // Implement From<ExprVariable> for LinearExpr
         impl From<$var_type> for LinearExpr<$var_type> {
@@ -407,4 +432,5 @@ macro_rules! impl_expr_ops {
     };
 }
 
+pub(crate) use impl_expr_display;
 pub(crate) use impl_expr_ops;

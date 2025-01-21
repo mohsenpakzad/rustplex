@@ -1,4 +1,4 @@
-use crate::core::expression::{impl_expr_ops, ExprVariable};
+use crate::core::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
 use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
 use std::{fmt, rc::Rc};
@@ -116,4 +116,5 @@ impl fmt::Display for StdVarRef {
 
 impl ExprVariable for StdVarRef {}
 
+impl_expr_display!(StdVarRef);
 impl_expr_ops!(StdVarRef, [f64, f32, i8, i16, i32, i64, i128, isize]);

@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-use super::expression::{impl_expr_ops, ExprVariable};
+use super::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
 
 #[derive(Debug)]
 struct Variable {
@@ -135,4 +135,5 @@ impl fmt::Display for VarRef {
 
 impl ExprVariable for VarRef {}
 
+impl_expr_display!(VarRef);
 impl_expr_ops!(VarRef, [f64, f32, i8, i16, i32, i64, i128, isize]);
