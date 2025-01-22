@@ -88,6 +88,38 @@ impl SlackDictionary {
         &self.variable_map
     }
 
+    pub fn get_objective_value(&self) -> f64 {
+        self.objective.constant
+    }
+
+    pub fn get_basic_values(&self) -> HashMap<DictVarRef, f64> {
+        self.entries
+            .iter()
+            .map(|entry| (entry.get_basic_var().clone(), entry.get_value()))
+            .collect()
+    }
+
+    pub fn get_std_values(&self) -> HashMap<StdVarRef, f64> {
+        let basic_to_entry = self
+            .entries
+            .iter()
+            .map(|entry| (entry.get_basic_var(), entry.clone()))
+            .collect::<HashMap<_, _>>();
+
+        self.variable_map
+            .iter()
+            .map(|(std_var, dict_var)| {
+                (
+                    std_var.clone(),
+                    basic_to_entry
+                        .get(dict_var)
+                        .map(DictEntryRef::get_value)
+                        .unwrap_or(0.0),
+                )
+            })
+            .collect()
+    }
+
     pub fn add_var_to_all_entries(&mut self, var: DictVarRef, coefficient: f64) {
         for entry in self.entries.iter_mut() {
             entry.add_non_basic(var.clone(), coefficient);
