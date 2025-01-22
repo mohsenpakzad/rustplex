@@ -14,7 +14,7 @@ use super::{
 };
 
 /// A model that enforces standard form constraints
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StandardModel {
     variables: Vec<StdVarRef>,
     constraints: Vec<StdConstrRef>,
@@ -26,12 +26,7 @@ type VariableMap = HashMap<VarRef, (Option<StdVarRef>, Option<StdVarRef>)>;
 
 impl StandardModel {
     pub fn new() -> Self {
-        Self {
-            variables: Vec::new(),
-            constraints: Vec::new(),
-            objective: None,
-            variable_map: None,
-        }
+        Self::default()
     }
 
     pub fn from_model(model: &Model) -> Self {
