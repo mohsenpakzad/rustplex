@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time};
+use std::{collections::HashMap, fmt, time};
 
 use super::status::SolverStatus;
 
@@ -73,5 +73,33 @@ impl<V> Default for SolverSolution<V> {
             iterations: 0,
             solve_time: time::Duration::ZERO,
         }
+    }
+}
+
+impl<V: fmt::Display + Eq + std::hash::Hash> fmt::Display for SolverSolution<V> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Solver Status: {:?}", self.status)?;
+        if self.status.is_optimal() {
+            writeln!(
+                f,
+                "Objective Value: {:.2}",
+                self.objective_value.unwrap_or(0.0)
+            )?;
+        } else {
+            writeln!(f, "Objective Value: {:?}", self.objective_value)?;
+        }
+
+        if let Some(ref vars) = self.variable_values {
+            writeln!(f, "Variable Values: [")?;
+            for (var, value) in vars {
+                writeln!(f, "\t{}: {:.2}", var, value)?;
+            }
+            writeln!(f, "]")?;
+        } else {
+            writeln!(f, "Variable Values: None")?;
+        }
+        writeln!(f, "Iterations: {}", self.iterations)?;
+        write!(f, "Solve Time: {:.2?}", self.solve_time)?;
+        Ok(())
     }
 }
