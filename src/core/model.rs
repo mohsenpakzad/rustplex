@@ -7,6 +7,7 @@ use crate::{
         objective::{Objective, ObjectiveSense},
         variable::VarRef,
     },
+    simplex::solution::SolverSolution,
     standardization::standard_model::StandardModel,
 };
 
@@ -15,6 +16,7 @@ pub struct Model {
     variables: Vec<VarRef>,
     constraints: Vec<ConstrRef>,
     objective: Option<Objective>,
+    solution: SolverSolution<VarRef>,
 }
 
 impl Model {
@@ -51,6 +53,12 @@ impl Model {
         StandardModel::from_model(&self)
     }
 
+    pub fn solve(&mut self) {
+        let mut standardized_model = StandardModel::from_model(&self);
+        standardized_model.solve();
+        self.solution = standardized_model.get_model_solution().unwrap()
+    }
+
     pub fn get_variables(&self) -> &Vec<VarRef> {
         &self.variables
     }
@@ -61,6 +69,10 @@ impl Model {
 
     pub fn get_objective(&self) -> &Option<Objective> {
         &self.objective
+    }
+
+    pub fn get_solution(&self) -> &SolverSolution<VarRef> {
+        &self.solution
     }
 }
 
