@@ -11,6 +11,7 @@ use super::{dict_entry::DictEntryRef, dict_variable::DictVarRef};
 pub struct SlackDictionary {
     objective: LinearExpr<DictVarRef>,
     entries: Vec<DictEntryRef>,
+    non_basic_entries: HashMap<DictVarRef, Vec<DictEntryRef>>,
     variable_map: VariableMap,
 }
 
@@ -37,7 +38,20 @@ impl SlackDictionary {
                     ),
                 )
             })
-            .collect();
+            .collect::<Vec<_>>();
+
+        let non_basic_entries = entries
+            .iter()
+            .flat_map(|entry| {
+                entry
+                    .get_non_basics()
+                    .into_iter()
+                    .map(move |non_basic_var| (non_basic_var, entry.clone()))
+            })
+            .fold(HashMap::new(), |mut acc, (var, entry)| {
+                acc.entry(var).or_insert_with(Vec::new).push(entry);
+                acc
+            });
 
         let objective = standard_model
             .get_objective()
@@ -48,6 +62,7 @@ impl SlackDictionary {
         Self {
             objective,
             entries,
+            non_basic_entries,
             variable_map,
         }
     }
@@ -77,41 +92,38 @@ impl SlackDictionary {
 
     pub fn add_var_to_all_entries(&mut self, var: DictVarRef, coefficient: f64) {
         for entry in self.entries.iter_mut() {
-            entry.add_non_basic(var.clone(), coefficient)
+            entry.add_non_basic(var.clone(), coefficient);
+            self.non_basic_entries
+                .entry(var.clone())
+                .or_insert_with(Vec::new)
+                .push(entry.clone());
         }
     }
 
     pub fn remove_var_from_all_entries(&mut self, var: DictVarRef) {
         for entry in self.entries.iter_mut() {
             entry.remove_non_basic(var.clone());
+            self.non_basic_entries.remove(&var);
         }
     }
 
-    // TODO: improve this function, use leaving index or pivot_row instead of leaving var.
-    pub fn pivot(&mut self, entering: &DictVarRef, leaving: &DictVarRef) {
-        // Step 1: Find the index of the leaving variable in the entries
-        let leaving_idx = self
-            .entries
+    pub fn pivot(&mut self, entering: &DictVarRef, leaving: &DictEntryRef) {
+        leaving.switch_to_basic(entering.clone());
+        let leaving_expr = leaving.get_expr();
+
+        // Update entries that contain entering variable
+        self.non_basic_entries
+            .get(&entering)
+            .unwrap()
             .iter()
-            .position(|entry| &entry.get_basic_var() == leaving);
-
-        // Ensure the leaving variable is present in the dictionary
-        if let Some(leaving_idx) = leaving_idx {
-            let pivot_row = &mut self.entries[leaving_idx];
-            pivot_row.switch_to_basic(entering.clone());
-
-            // TODO: this is hot fix, consider remove this later.
-            let pivot_row = pivot_row.clone();
-
-            self.entries.iter_mut().for_each(|entry| {
-                entry.replace_non_basic_with_expr(entering.clone(), &pivot_row.get_expr());
+            .for_each(|entry_contains_entering| {
+                entry_contains_entering
+                    .replace_non_basic_with_expr(entering.clone(), &leaving_expr);
             });
 
-            self.objective
-                .replace_var_with_expr(entering.clone(), &pivot_row.get_expr());
-        } else {
-            panic!("Leaving variable not found in the dictionary.");
-        }
+        // Update objective
+        self.objective
+            .replace_var_with_expr(entering.clone(), &leaving_expr);
     }
 
     fn transform_expression(
