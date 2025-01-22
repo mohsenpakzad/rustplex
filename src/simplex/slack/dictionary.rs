@@ -12,10 +12,8 @@ pub struct SlackDictionary {
     objective: LinearExpr<DictVarRef>,
     entries: Vec<DictEntryRef>,
     non_basic_entries: HashMap<DictVarRef, Vec<DictEntryRef>>,
-    variable_map: VariableMap,
+    variable_map: HashMap<StdVarRef, DictVarRef>,
 }
-
-type VariableMap = HashMap<StdVarRef, DictVarRef>;
 
 impl SlackDictionary {
     pub fn from_standard_model(standard_model: &StandardModel) -> Self {
@@ -23,7 +21,7 @@ impl SlackDictionary {
             .get_variables()
             .iter()
             .map(|var| (var.clone(), DictVarRef::new_non_slack(var.clone())))
-            .collect::<VariableMap>();
+            .collect::<HashMap<_, _>>();
 
         let entries = standard_model
             .get_constraints()
@@ -86,7 +84,7 @@ impl SlackDictionary {
         &self.entries
     }
 
-    pub fn get_variable_map(&self) -> &VariableMap {
+    pub fn get_variable_map(&self) -> &HashMap<StdVarRef, DictVarRef> {
         &self.variable_map
     }
 
@@ -128,7 +126,7 @@ impl SlackDictionary {
 
     fn transform_expression(
         expression: &LinearExpr<StdVarRef>,
-        variable_map: &VariableMap,
+        variable_map: &HashMap<StdVarRef, DictVarRef>,
     ) -> LinearExpr<DictVarRef> {
         let std_terms = expression
             .terms
