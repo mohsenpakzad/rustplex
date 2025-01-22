@@ -11,6 +11,8 @@ use crate::{
     standardization::standard_model::StandardModel,
 };
 
+use super::variable::VariableType;
+
 #[derive(Debug, Default)]
 pub struct Model {
     variables: Vec<VarRef>,
@@ -49,11 +51,21 @@ impl Model {
         self.objective = Some(Objective::new(sense, expression.into()));
     }
 
+    pub fn is_lp(&self) -> bool {
+        !self
+            .variables
+            .iter()
+            .any(|var| !matches!(var.get_type(), VariableType::Continuous))
+    }
+
     pub fn to_standard(&self) -> StandardModel {
         StandardModel::from_model(&self)
     }
 
     pub fn solve(&mut self) {
+        if !self.is_lp() {
+            todo!("Non LP calculation is not supported yet.")
+        }
         let mut standardized_model = StandardModel::from_model(&self);
         standardized_model.solve();
         self.solution = standardized_model.get_model_solution().unwrap()
