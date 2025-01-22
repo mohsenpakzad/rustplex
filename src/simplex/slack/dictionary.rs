@@ -5,12 +5,12 @@ use crate::{
     standardization::{standard_model::StandardModel, standard_variable::StdVarRef},
 };
 
-use super::{dict_entry::DictEntry, dict_variable::DictVarRef};
+use super::{dict_entry::DictEntryRef, dict_variable::DictVarRef};
 
 #[derive(Debug, Clone)]
 pub struct SlackDictionary {
     objective: LinearExpr<DictVarRef>,
-    entries: Vec<DictEntry>,
+    entries: Vec<DictEntryRef>,
     variable_map: VariableMap,
 }
 
@@ -29,7 +29,7 @@ impl SlackDictionary {
             .iter()
             .enumerate()
             .map(|(idx, constr)| {
-                DictEntry::new(
+                DictEntryRef::new(
                     DictVarRef::new_slack(idx),
                     Self::transform_expression(
                         &(constr.get_rhs() - constr.get_lhs()),
@@ -67,7 +67,7 @@ impl SlackDictionary {
         &self.objective
     }
 
-    pub fn get_entires(&self) -> &Vec<DictEntry> {
+    pub fn get_entires(&self) -> &Vec<DictEntryRef> {
         &self.entries
     }
 
@@ -104,11 +104,11 @@ impl SlackDictionary {
             let pivot_row = pivot_row.clone();
 
             self.entries.iter_mut().for_each(|entry| {
-                entry.replace_non_basic_with_expr(entering.clone(), pivot_row.get_expr());
+                entry.replace_non_basic_with_expr(entering.clone(), &pivot_row.get_expr());
             });
 
             self.objective
-                .replace_var_with_expr(entering.clone(), pivot_row.get_expr());
+                .replace_var_with_expr(entering.clone(), &pivot_row.get_expr());
         } else {
             panic!("Leaving variable not found in the dictionary.");
         }
