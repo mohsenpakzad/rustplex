@@ -1,11 +1,14 @@
 use std::{collections::HashMap, fmt};
 
-use crate::core::{
-    constraint::{ConstrRef, ConstraintSense},
-    expression::LinearExpr,
-    model::Model,
-    objective::Objective,
-    variable::{VarRef, VariableType},
+use crate::{
+    core::{
+        constraint::{ConstrRef, ConstraintSense},
+        expression::LinearExpr,
+        model::Model,
+        objective::Objective,
+        variable::{VarRef, VariableType},
+    },
+    simplex::{solution::SolverSolution, solver::SimplexSolver},
 };
 
 use super::{
@@ -20,6 +23,7 @@ pub struct StandardModel {
     constraints: Vec<StdConstrRef>,
     objective: Option<StandardObjective>,
     variable_map: Option<VariableMap>,
+    solution: SolverSolution<StdVarRef>,
 }
 
 type VariableMap = HashMap<VarRef, (Option<StdVarRef>, Option<StdVarRef>)>;
@@ -74,6 +78,7 @@ impl StandardModel {
             constraints: standard_constraints,
             objective: standard_objective,
             variable_map: Some(variable_map),
+            solution: SolverSolution::default(),
         }
     }
 
@@ -96,6 +101,11 @@ impl StandardModel {
         self.objective = Some(StandardObjective::new(expression));
     }
 
+    pub fn solve(&mut self) {
+        let mut solver = SimplexSolver::form_standard_model(&self, None);
+        self.solution = solver.start();
+    }
+
     pub fn get_variables(&self) -> &Vec<StdVarRef> {
         &self.variables
     }
@@ -106,6 +116,44 @@ impl StandardModel {
 
     pub fn get_objective(&self) -> &Option<StandardObjective> {
         &self.objective
+    }
+
+    pub fn get_solution(&self) -> &SolverSolution<StdVarRef> {
+        &self.solution
+    }
+
+    pub fn get_model_solution(&self) -> Option<SolverSolution<VarRef>> {
+        let variable_map = self.variable_map.as_ref()?;
+
+        let solution_values = self.solution.get_variable_values();
+        if solution_values.is_none() {
+            return Some(self.solution.clone_with_new_variable_type(None));
+        }
+        let solution_values = solution_values.as_ref().unwrap();
+
+        let mapped_values = variable_map
+            .iter()
+            .map(|(var, std_var)| {
+                let value = match std_var {
+                    (Some(pos), Some(neg)) => {
+                        let pos_value = solution_values.get(pos).unwrap() + pos.get_shift_value();
+                        let neg_value = solution_values.get(neg).unwrap() + neg.get_shift_value();
+                        pos_value - neg_value
+                    }
+                    (Some(pos), None) => solution_values.get(pos).unwrap() + pos.get_shift_value(),
+                    (None, Some(neg)) => {
+                        -(solution_values.get(neg).unwrap() + neg.get_shift_value())
+                    }
+                    _ => 0.0,
+                };
+                (var.clone(), value)
+            })
+            .collect();
+
+        Some(
+            self.solution
+                .clone_with_new_variable_type(Some(mapped_values)),
+        )
     }
 
     /// Standardize a variable into standard form (non-negative variables)
