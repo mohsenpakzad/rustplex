@@ -176,13 +176,13 @@ impl StandardModel {
                 let lb = var.get_lower_bound();
                 let ub = var.get_upper_bound();
 
-                if lb >= 0.0 {
+                if lb == 0.0 {
                     // Already non-negative
                     (
                         Some(StdVarRef::new_positive().name(std_var_name).upper_bound(ub)),
                         None,
                     )
-                } else if ub <= 0.0 {
+                } else if ub == 0.0 {
                     (
                         None,
                         Some(
