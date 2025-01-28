@@ -189,16 +189,14 @@ macro_rules! impl_expr_display {
 // 17. LinearExpr * numeric
 // 18. numeric * LinearExpr
 // 19. LinearExpr / numeric
-// 20. numeric / LinearExpr
 // ------------- Numeric on ExprVariable ops -------------
-// 21. ExprVariable + numeric
-// 22. numeric + ExprVariable
-// 23. ExprVariable - numeric
-// 24. numeric - ExprVariable
-// 25. ExprVariable * numeric
-// 26. numeric * ExprVariable
-// 27. ExprVariable / numeric
-// 28. numeric / ExprVariable
+// 20. ExprVariable + numeric
+// 21. numeric + ExprVariable
+// 22. ExprVariable - numeric
+// 23. numeric - ExprVariable
+// 24. ExprVariable * numeric
+// 25. numeric * ExprVariable
+// 26. ExprVariable / numeric
 
 macro_rules! impl_expr_ops {
     ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
@@ -406,16 +404,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 20. numeric / LinearExpr
-            impl Div<LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn div(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    expr / self
-                }
-            }
-
-            // 21. ExprVariable + numeric
+            // 20. ExprVariable + numeric
             impl Add<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -426,7 +415,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 22. numeric + ExprVariable
+            // 21. numeric + ExprVariable
             impl Add<$var_type> for $num_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -435,7 +424,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 23. ExprVariable - numeric
+            // 22. ExprVariable - numeric
             impl Sub<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -446,7 +435,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 24. numeric - ExprVariable
+            // 23. numeric - ExprVariable
             impl Sub<$var_type> for $num_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -457,7 +446,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 25. ExprVariable * numeric
+            // 24. ExprVariable * numeric
             impl Mul<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -468,7 +457,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 26. numeric * ExprVariable
+            // 25. numeric * ExprVariable
             impl Mul<$var_type> for $num_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -477,7 +466,7 @@ macro_rules! impl_expr_ops {
                 }
             }
 
-            // 27. ExprVariable / numeric
+            // 26. ExprVariable / numeric
             impl Div<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
 
@@ -485,15 +474,6 @@ macro_rules! impl_expr_ops {
                     let mut terms = HashMap::new();
                     terms.insert(self, 1.0 / (constant as f64));
                     LinearExpr::with_terms(terms)
-                }
-            }
-
-            // 28. numeric / ExprVariable
-            impl Div<$var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn div(self, var: $var_type) -> LinearExpr<$var_type> {
-                    var / self
                 }
             }
         )*
