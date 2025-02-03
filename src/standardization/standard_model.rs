@@ -137,14 +137,12 @@ impl StandardModel {
             .map(|(var, std_var)| {
                 let value = match std_var {
                     (Some(pos), Some(neg)) => {
-                        let pos_value = solution_values.get(pos).unwrap() + pos.get_shift_value();
-                        let neg_value = solution_values.get(neg).unwrap() + neg.get_shift_value();
+                        let pos_value = solution_values.get(pos).unwrap() + pos.get_shift();
+                        let neg_value = solution_values.get(neg).unwrap() + neg.get_shift();
                         pos_value - neg_value
                     }
-                    (Some(pos), None) => solution_values.get(pos).unwrap() + pos.get_shift_value(),
-                    (None, Some(neg)) => {
-                        -(solution_values.get(neg).unwrap() + neg.get_shift_value())
-                    }
+                    (Some(pos), None) => solution_values.get(pos).unwrap() + pos.get_shift(),
+                    (None, Some(neg)) => -(solution_values.get(neg).unwrap() + neg.get_shift()),
                     _ => 0.0,
                 };
                 (var.clone(), value)
@@ -269,19 +267,18 @@ impl StandardModel {
         for (var, &coefficient) in &expression.terms {
             match variable_map.get(var).unwrap() {
                 (Some(pos_var), Some(neg_var)) => {
-                    shift += coefficient * pos_var.get_shift_value()
-                        + coefficient * neg_var.get_shift_value();
+                    shift += coefficient * pos_var.get_shift() + coefficient * neg_var.get_shift();
 
                     std_terms.insert(pos_var.clone(), coefficient);
                     std_terms.insert(neg_var.clone(), -coefficient);
                 }
                 (Some(pos_var), None) => {
-                    shift += coefficient * pos_var.get_shift_value();
+                    shift += coefficient * pos_var.get_shift();
 
                     std_terms.insert(pos_var.clone(), coefficient);
                 }
                 (None, Some(neg_var)) => {
-                    shift += coefficient * neg_var.get_shift_value();
+                    shift += coefficient * neg_var.get_shift();
 
                     std_terms.insert(neg_var.clone(), -coefficient);
                 }

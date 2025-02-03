@@ -70,16 +70,16 @@ impl StdVarRef {
             .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
     }
 
-    pub fn is_negative_part(&self) -> bool {
-        self.0.borrow().is_negative_part
-    }
-
-    pub fn get_shift_value(&self) -> f64 {
+    pub fn get_shift(&self) -> f64 {
         self.0.borrow().shift
     }
 
     pub fn get_upper_bound(&self) -> f64 {
         self.0.borrow().upper_bound
+    }
+
+    pub fn is_negative_part(&self) -> bool {
+        self.0.borrow().is_negative_part
     }
 }
 
