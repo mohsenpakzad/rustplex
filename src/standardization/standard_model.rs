@@ -58,6 +58,7 @@ impl StandardModel {
             .iter()
             .flat_map(|constraint| Self::standardize_constraint(constraint, &variable_map))
             .chain(standard_variables.iter().filter_map(|std_var| {
+                // Create upper bound constraints for variables
                 let ub = std_var.get_upper_bound();
                 if ub < f64::INFINITY {
                     Some(StdConstrRef::new(std_var.clone(), ub))
@@ -161,78 +162,59 @@ impl StandardModel {
         let std_var_name = format!("FromVar: {}", var.get_name_or_default());
 
         match var.get_type() {
-            VariableType::Binary => {
-                // Binary variables are already standardized (0 ≤ x ≤ 1)
-                (
-                    Some(
-                        StdVarRef::new_positive()
-                            .name(std_var_name)
-                            .upper_bound(1.0),
-                    ),
-                    None,
-                )
-            }
+            VariableType::Binary => (
+                // Binary variables are converted to a non-negative variable with upper bound of 1
+                Some(
+                    StdVarRef::new_positive()
+                        .name(std_var_name)
+                        .upper_bound(1.0),
+                ),
+                None,
+            ),
             VariableType::Integer | VariableType::Continuous => {
                 let lb = var.get_lower_bound();
                 let ub = var.get_upper_bound();
 
-                if lb == 0.0 {
-                    // Already non-negative
-                    (
+                match (lb, ub) {
+                    // Case 1: Lower bound is 0, create non-negative variable with optional upper bound
+                    (0.0, _) => (
                         Some(StdVarRef::new_positive().name(std_var_name).upper_bound(ub)),
                         None,
-                    )
-                } else if ub == 0.0 {
-                    (
+                    ),
+                    // Case 2: Upper bound is 0, create non-positive variable
+                    (_, 0.0) => (
                         None,
                         Some(
                             StdVarRef::new_negative()
                                 .name(std_var_name)
                                 .upper_bound(-lb),
                         ),
-                    )
-                } else if lb > f64::NEG_INFINITY && ub < f64::INFINITY {
-                    // Bounded variable: shift to make non-negative
-                    // x' = x - lb where x' ≥ 0
-                    (
+                    ),
+                    // Case 3: Unbounded variable, split into positive and negative parts
+                    (f64::NEG_INFINITY, f64::INFINITY) => (
+                        Some(StdVarRef::new_positive().name(std_var_name.clone())),
+                        Some(StdVarRef::new_negative().name(std_var_name)),
+                    ),
+                    // Case 4: Lower bound is negative infinity, create shifted negative variable
+                    (f64::NEG_INFINITY, _) => (
+                        None,
+                        Some(StdVarRef::new_negative().name(std_var_name).shift(ub)),
+                    ),
+                    // Case 5: Upper bound is infinity, create shifted positive variable
+                    (_, f64::INFINITY) => (
+                        Some(StdVarRef::new_positive().name(std_var_name).shift(lb)),
+                        None,
+                    ),
+                    // Case 6: Bounded variable within finite range, create shifted positive variable
+                    _ => (
                         Some(
-                            StdVarRef::new_negative()
+                            StdVarRef::new_positive()
                                 .name(std_var_name)
                                 .shift(lb)
                                 .upper_bound(ub - lb),
                         ),
                         None,
-                    )
-                } else if lb == f64::NEG_INFINITY && ub == f64::INFINITY {
-                    // Unrestricted variable: split into difference of two non-negative variables
-                    // x = x⁺ - x⁻ where x⁺, x⁻ ≥ 0
-                    (
-                        Some(StdVarRef::new_positive().name(std_var_name.clone())),
-                        Some(StdVarRef::new_negative().name(std_var_name)),
-                    )
-                } else if lb == f64::NEG_INFINITY {
-                    // Lower-unbounded: split and apply upper bound to positive part
-                    // x = x⁺ - x⁻ where x⁺ ≥ 0, x⁻ ≤ ub
-                    (
-                        Some(
-                            StdVarRef::new_positive()
-                                .name(std_var_name.clone())
-                                .upper_bound(ub),
-                        ),
-                        Some(StdVarRef::new_negative().name(std_var_name)),
-                    )
-                } else {
-                    // ub == f64::INFINITY
-                    // Upper-unbounded: split and apply lower bound to negative part
-                    // x = x⁺ - x⁻ where x⁺ ≤ ub, x⁻ ≥ 0
-                    (
-                        Some(StdVarRef::new_positive().name(std_var_name.clone())),
-                        Some(
-                            StdVarRef::new_negative()
-                                .name(std_var_name)
-                                .upper_bound(-lb),
-                        ),
-                    )
+                    ),
                 }
             }
         }
@@ -241,12 +223,13 @@ impl StandardModel {
     /// Standardize a single constraint into standard form (ax ≤ b)
     fn standardize_constraint(constr: &ConstrRef, variable_map: &VariableMap) -> Vec<StdConstrRef> {
         let std_constr_name = format!("FromConstr: {}", constr.get_name_or_default());
-        let lhs = constr.get_lhs();
-        let rhs = constr.get_rhs();
         // Move everything to LHS, constant to RHS
-        let mut std_lhs = Self::standardize_expression(&(lhs.clone() - rhs.clone()), variable_map);
+        let mut std_lhs = Self::standardize_expression(
+            &(constr.get_lhs().clone() - constr.get_rhs().clone()),
+            variable_map,
+        );
+        let std_rhs = -std_lhs.constant;
         std_lhs.constant = 0.0;
-        let std_rhs = rhs.constant - lhs.constant;
 
         match constr.get_sense() {
             ConstraintSense::LessEqual => {
@@ -275,25 +258,38 @@ impl StandardModel {
         )
     }
 
+    /// Standardize a linear expression into standard form
     fn standardize_expression(
         expression: &LinearExpr<VarRef>,
         variable_map: &VariableMap,
     ) -> LinearExpr<StdVarRef> {
-        let std_terms = expression
-            .terms
-            .iter()
-            .flat_map(|(var, &coefficient)| match variable_map.get(var).unwrap() {
-                (Some(pos_var), Some(neg_var)) => vec![
-                    (pos_var.clone(), coefficient),
-                    (neg_var.clone(), -coefficient),
-                ],
-                (Some(pos_var), None) => vec![(pos_var.clone(), coefficient)],
-                (None, Some(neg_var)) => vec![(neg_var.clone(), -coefficient)],
-                _ => vec![],
-            })
-            .collect::<HashMap<StdVarRef, f64>>();
+        let mut std_terms = HashMap::new();
+        let mut shift = 0.0;
 
-        LinearExpr::with_terms_and_constant(std_terms, expression.constant)
+        for (var, &coefficient) in &expression.terms {
+            match variable_map.get(var).unwrap() {
+                (Some(pos_var), Some(neg_var)) => {
+                    shift += coefficient * pos_var.get_shift_value()
+                        + coefficient * neg_var.get_shift_value();
+
+                    std_terms.insert(pos_var.clone(), coefficient);
+                    std_terms.insert(neg_var.clone(), -coefficient);
+                }
+                (Some(pos_var), None) => {
+                    shift += coefficient * pos_var.get_shift_value();
+
+                    std_terms.insert(pos_var.clone(), coefficient);
+                }
+                (None, Some(neg_var)) => {
+                    shift += coefficient * neg_var.get_shift_value();
+
+                    std_terms.insert(neg_var.clone(), -coefficient);
+                }
+                _ => {} // Ignore if no variable exists
+            }
+        }
+
+        LinearExpr::with_terms_and_constant(std_terms, expression.constant + shift)
     }
 }
 
