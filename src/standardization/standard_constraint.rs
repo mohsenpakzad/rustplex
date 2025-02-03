@@ -4,7 +4,7 @@ use std::{cell::RefCell, fmt, rc::Rc};
 use super::standard_variable::StdVarRef;
 
 #[derive(Debug)]
-pub struct StandardConstraint {
+struct StandardConstraint {
     name: Option<String>,
     lhs: LinearExpr<StdVarRef>,
     rhs: f64,

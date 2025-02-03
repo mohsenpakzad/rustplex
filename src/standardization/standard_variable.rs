@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::{fmt, rc::Rc};
 
 #[derive(Debug, Clone)]
-pub struct StandardVariable {
+struct StandardVariable {
     name: Option<String>,
     shift: f64,
     upper_bound: f64,
