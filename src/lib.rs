@@ -1,3 +1,3 @@
 pub mod core;
-pub mod simplex;
+mod simplex;
 pub mod standardization;
