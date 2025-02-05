@@ -18,6 +18,15 @@ impl<T: ExprVariable> LinearExpr<T> {
         }
     }
 
+    pub fn with_term(var: T, coefficient: f64) -> Self {
+        let mut terms = HashMap::new();
+        terms.insert(var, coefficient);
+        Self {
+            terms,
+            constant: 0.0,
+        }
+    }
+
     pub fn with_terms(terms: HashMap<T, f64>) -> Self {
         Self {
             terms,
@@ -60,6 +69,10 @@ impl<T: ExprVariable> LinearExpr<T> {
             self.add_term(var.clone(), -coefficient);
         }
         self.constant -= other.constant;
+    }
+
+    pub fn add_constant(&mut self, constant: f64) {
+        self.constant += constant;
     }
 
     pub fn replace_var_with_expr(
