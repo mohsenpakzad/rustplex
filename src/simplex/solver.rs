@@ -24,10 +24,7 @@ pub struct SimplexSolver {
 }
 
 impl SimplexSolver {
-    pub fn form_standard_model(
-        standard_model: &StandardModel,
-        config: Option<SolverConfig>,
-    ) -> Self {
+    pub fn form_standard_model(standard_model: &StandardModel, config: SolverConfig) -> Self {
         if standard_model.get_objective().is_none() {
             panic!("Objective must be set.");
         }
@@ -37,7 +34,7 @@ impl SimplexSolver {
         Self {
             slack_dict,
             iteration_count: 0,
-            config: config.unwrap_or_default(),
+            config,
         }
     }
 

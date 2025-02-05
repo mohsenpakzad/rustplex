@@ -8,7 +8,7 @@ use crate::{
         objective::Objective,
         variable::{VarRef, VariableType},
     },
-    simplex::{solution::SolverSolution, solver::SimplexSolver},
+    simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
 };
 
 use super::{
@@ -24,6 +24,7 @@ pub struct StandardModel {
     objective: Option<StandardObjective>,
     variable_map: Option<VariableMap>,
     solution: SolverSolution<StdVarRef>,
+    config: Option<SolverConfig>,
 }
 
 type VariableMap = HashMap<VarRef, (Option<StdVarRef>, Option<StdVarRef>)>;
@@ -80,7 +81,13 @@ impl StandardModel {
             objective: standard_objective,
             variable_map: Some(variable_map),
             solution: SolverSolution::default(),
+            config: None,
         }
+    }
+
+    pub fn with_config(mut self, config: SolverConfig) -> Self {
+        self.config = Some(config);
+        self
     }
 
     /// Add a new non-negative variable
@@ -103,7 +110,8 @@ impl StandardModel {
     }
 
     pub fn solve(&mut self) {
-        let mut solver = SimplexSolver::form_standard_model(&self, None);
+        let mut solver =
+            SimplexSolver::form_standard_model(&self, self.config.clone().unwrap_or_default());
         self.solution = solver.start();
     }
 

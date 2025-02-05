@@ -7,7 +7,7 @@ use crate::{
         objective::{Objective, ObjectiveSense},
         variable::VarRef,
     },
-    simplex::solution::SolverSolution,
+    simplex::{config::SolverConfig, solution::SolverSolution},
     standardization::standard_model::StandardModel,
 };
 
@@ -19,11 +19,17 @@ pub struct Model {
     constraints: Vec<ConstrRef>,
     objective: Option<Objective>,
     solution: SolverSolution<VarRef>,
+    config: Option<SolverConfig>,
 }
 
 impl Model {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn with_config(mut self, config: SolverConfig) -> Self {
+        self.config = Some(config);
+        self
     }
 
     pub fn add_variable(&mut self) -> VarRef {
@@ -66,7 +72,9 @@ impl Model {
         if !self.is_lp() {
             todo!("Non LP calculation is not supported yet.")
         }
-        let mut standardized_model = StandardModel::from_model(&self);
+
+        let mut standardized_model =
+            StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
         standardized_model.solve();
         self.solution = standardized_model.get_model_solution().unwrap()
     }
