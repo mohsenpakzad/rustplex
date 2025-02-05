@@ -79,8 +79,8 @@ impl<T: ExprVariable> LinearExpr<T> {
     }
 
     pub fn scale(&mut self, scalar: f64) {
-        for coeff in self.terms.values_mut() {
-            *coeff *= scalar;
+        for coefficient in self.terms.values_mut() {
+            *coefficient *= scalar;
         }
         self.constant *= scalar;
     }
