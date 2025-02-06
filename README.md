@@ -1,50 +1,23 @@
-# Linear Programming Solver in Rust
+# Rustplex
 
-Welcome to the **Rustplex**, a robust and efficient simplex solver implemented in Rust. This project provides tools to solve linear programming (LP) problems using the simplex method while supporting standardization, slack dictionaries, and auxiliary phases to handle infeasible and unbounded cases.
+A fast and efficient **Linear Programming (LP) Solver** implemented in Rust, designed to solve optimization problems using the **Simplex Algorithm**.
 
----
+## ✨ Features
 
-## Features
+- **Fast & Efficient**: Optimized implementation of the **Simplex Algorithm** for solving LP problems.
+- **User-Friendly API**: Designed for ease of use with a clean and intuitive API.
+- **Custom Constraints & Objectives**: Define your own constraints and objective functions effortlessly.
+- **Scalable & Reliable**: Suitable for large-scale linear programming problems.
 
-- **Standardization**:
+## 🚀 Installation
 
-  - Converts any LP problem into standard form for compatibility with the simplex algorithm.
-  - Handles constraints and variable bounds automatically.
+install via Cargo:
 
-- **Simplex Solver**:
+```sh
+cargo add rustplex
+```
 
-  - Implements the two-phase simplex method for solving LP problems efficiently.
-  - Detects and handles infeasible or unbounded problems.
-
-- **Configurable Solver**:
-
-  - Supports custom tolerances and iteration limits via `SolverConfig`.
-  - Offers robust numerical stability by accounting for floating-point precision errors.
-
-- **Extensible Slack Dictionary**:
-
-  - Efficiently manages basic and non-basic variables.
-  - Allows pivot operations and tracks the objective function dynamically.
-
-- **Detailed Solutions**:
-  - Provides optimal values for decision variables.
-  - Reports solver status (optimal, infeasible, unbounded, or iteration limit reached).
-
----
-
-## Usage
-
-### Input Requirements
-
-The solver expects an LP problem in standard form, including:
-
-1. An objective function to maximize or minimize.
-2. A set of constraints.
-3. Decision variable bounds.
-
-### Example
-
-Here is an example of how to set up and solve an LP problem:
+## 🛠 Usage
 
 ```rust
 use rustplex::core::{constraint::ConstraintSense, model::Model, objective::ObjectiveSense};
@@ -52,21 +25,18 @@ use rustplex::core::{constraint::ConstraintSense, model::Model, objective::Objec
 fn main() {
     let mut model = Model::new();
 
-    let x1 = model.add_variable().name("x1").lower_bound(0.0);
-    let x2 = model.add_variable().name("x2").lower_bound(0.0);
-    let x3 = model.add_variable().name("x3").lower_bound(0.0);
+    let x1 = model.add_variable().name("x1").bounds(1.0..=5.0);
+    let x2 = model.add_variable().name("x2").upper_bound(2.0);
+    let x3 = model.add_variable().name("x3");
 
-    model.set_objective(
-        ObjectiveSense::Maximize,
-        x1.clone() + x2.clone() + x3.clone(),
-    );
+    model.set_objective(ObjectiveSense::Maximize, &x1 + &x2 + &x3);
 
     model
-        .add_constraint(x1.clone(), ConstraintSense::LessEqual, 10)
+        .add_constraint(&x1, ConstraintSense::LessEqual, 10)
         .name("constr1");
 
     model
-        .add_constraint(x2.clone() + x3.clone(), ConstraintSense::LessEqual, 5)
+        .add_constraint(&x2 + &x3, ConstraintSense::LessEqual, 5)
         .name("constr2");
 
     model.solve();
@@ -74,3 +44,31 @@ fn main() {
     println!("{}", model.get_solution());
 }
 ```
+
+Output:
+
+```
+Solver Status: Optimal
+Objective Value: 10.00
+Variable Values: [
+        Var(x2): 2.00
+        Var(x3): 3.00
+        Var(x1): 5.00
+]
+Iterations: 3
+Solve Time: 18.10µs
+```
+
+## 🛠 Contributing
+
+Contributions are welcome! Feel free to fork, submit issues, or open pull requests.
+
+## 📄 License
+
+This project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).
+
+See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE) for details.
+
+---
+
+_Developed with ❤️ in Rust._
