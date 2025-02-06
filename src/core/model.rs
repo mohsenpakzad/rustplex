@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     core::{
-        constraint::{ConstrRef, ConstraintSense},
+        constraint::{Constr, ConstraintSense},
         expression::LinearExpr,
         objective::{Objective, ObjectiveSense},
         variable::Var,
@@ -16,7 +16,7 @@ use super::variable::VariableType;
 #[derive(Debug, Default)]
 pub struct Model {
     variables: Vec<Var>,
-    constraints: Vec<ConstrRef>,
+    constraints: Vec<Constr>,
     objective: Option<Objective>,
     solution: SolverSolution<Var>,
     config: Option<SolverConfig>,
@@ -43,8 +43,8 @@ impl Model {
         lhs: impl Into<LinearExpr<Var>>,
         sense: ConstraintSense,
         rhs: impl Into<LinearExpr<Var>>,
-    ) -> ConstrRef {
-        let constr = ConstrRef::new(lhs.into(), sense, rhs.into());
+    ) -> Constr {
+        let constr = Constr::new(lhs.into(), sense, rhs.into());
         self.constraints.push(constr.clone());
         constr
     }
@@ -79,7 +79,7 @@ impl Model {
         &self.variables
     }
 
-    pub fn get_constraints(&self) -> &Vec<ConstrRef> {
+    pub fn get_constraints(&self) -> &Vec<Constr> {
         &self.constraints
     }
 

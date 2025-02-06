@@ -20,9 +20,9 @@ pub enum ConstraintSense {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstrRef(Rc<RefCell<Constraint>>);
+pub struct Constr(Rc<RefCell<Constraint>>);
 
-impl ConstrRef {
+impl Constr {
     pub fn new(
         lhs: impl Into<LinearExpr<Var>>,
         sense: ConstraintSense,
@@ -66,7 +66,7 @@ impl ConstrRef {
     }
 }
 
-impl fmt::Display for ConstrRef {
+impl fmt::Display for Constr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name_display = match self.get_name() {
             Some(name) => name.clone(),

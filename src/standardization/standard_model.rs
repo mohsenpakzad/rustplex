@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt};
 
 use crate::{
     core::{
-        constraint::{ConstrRef, ConstraintSense},
+        constraint::{Constr, ConstraintSense},
         expression::LinearExpr,
         model::Model,
         objective::Objective,
@@ -222,7 +222,7 @@ impl StandardModel {
     }
 
     /// Standardize a single constraint into standard form (ax ≤ b)
-    fn standardize_constraint(constr: &ConstrRef, variable_map: &VariableMap) -> Vec<StdConstrRef> {
+    fn standardize_constraint(constr: &Constr, variable_map: &VariableMap) -> Vec<StdConstrRef> {
         let std_constr_name = format!("FromConstr: {}", constr.get_name_or_default());
         // Move everything to LHS, constant to RHS
         let mut std_lhs = Self::standardize_expression(
