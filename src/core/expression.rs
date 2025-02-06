@@ -389,6 +389,17 @@ macro_rules! impl_expr_ops {
             }
         }
 
+        impl<'a> Add<&'a $var_type> for $var_type {
+            type Output = LinearExpr<$var_type>;
+
+            fn add(self, other: &'a Self) -> LinearExpr<$var_type> {
+                let mut terms = HashMap::new();
+                terms.insert(self, 1.0);
+                terms.insert(other.clone(), 1.0);
+                LinearExpr::with_terms(terms)
+            }
+        }
+
         // 7. ExprVariable - ExprVariable (owned and reference combinations)
         impl Sub for $var_type {
             type Output = LinearExpr<$var_type>;
@@ -407,6 +418,17 @@ macro_rules! impl_expr_ops {
             fn sub(self, other: Self) -> LinearExpr<$var_type> {
                 let mut terms = HashMap::new();
                 terms.insert(self.clone(), 1.0);
+                terms.insert(other.clone(), -1.0);
+                LinearExpr::with_terms(terms)
+            }
+        }
+
+        impl<'a> Sub<&'a $var_type> for $var_type {
+            type Output = LinearExpr<$var_type>;
+
+            fn sub(self, other: &'a Self) -> LinearExpr<$var_type> {
+                let mut terms = HashMap::new();
+                terms.insert(self, 1.0);
                 terms.insert(other.clone(), -1.0);
                 LinearExpr::with_terms(terms)
             }
@@ -466,6 +488,16 @@ macro_rules! impl_expr_ops {
             }
         }
 
+        impl<'a> Sub<LinearExpr<$var_type>> for &'a $var_type {
+            type Output = LinearExpr<$var_type>;
+
+            fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                let mut result = -expr;
+                result.add_term(self.clone(), 1.0);
+                result
+            }
+        }
+
         // 10. LinearExpr + ExprVariable (owned and reference combinations)
         impl Add<$var_type> for LinearExpr<$var_type> {
             type Output = LinearExpr<$var_type>;
@@ -487,6 +519,16 @@ macro_rules! impl_expr_ops {
             }
         }
 
+        impl<'a> Add<$var_type> for &LinearExpr<$var_type> {
+            type Output = LinearExpr<$var_type>;
+
+            fn add(self, var: $var_type) -> LinearExpr<$var_type> {
+                let mut result = self.clone();
+                result.add_term(var, 1.0);
+                result
+            }
+        }
+
         // 11. LinearExpr - ExprVariable (owned and reference combinations)
         impl Sub<$var_type> for LinearExpr<$var_type> {
             type Output = LinearExpr<$var_type>;
@@ -504,6 +546,16 @@ macro_rules! impl_expr_ops {
             fn sub(self, var: &'a $var_type) -> LinearExpr<$var_type> {
                 let mut result = self.clone();
                 result.add_term(var.clone(), -1.0);
+                result
+            }
+        }
+
+        impl<'a> Sub<$var_type> for &LinearExpr<$var_type> {
+            type Output = LinearExpr<$var_type>;
+
+            fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
+                let mut result = self.clone();
+                result.add_term(var, -1.0);
                 result
             }
         }
