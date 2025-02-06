@@ -16,15 +16,15 @@ pub enum DictVariable {
 }
 
 #[derive(Debug, Clone)]
-pub struct DictVarRef(Rc<DictVariable>);
+pub struct DictVar(Rc<DictVariable>);
 
-impl DictVarRef {
+impl DictVar {
     pub fn new_non_slack(var: StdVar) -> Self {
-        DictVarRef(Rc::new(DictVariable::NonSlack(var)))
+        DictVar(Rc::new(DictVariable::NonSlack(var)))
     }
 
     pub fn new_slack(idx: usize) -> Self {
-        DictVarRef(Rc::new(DictVariable::Slack(idx)))
+        DictVar(Rc::new(DictVariable::Slack(idx)))
     }
 
     pub fn get_var(&self) -> &DictVariable {
@@ -32,7 +32,7 @@ impl DictVarRef {
     }
 }
 
-impl PartialEq for DictVarRef {
+impl PartialEq for DictVar {
     fn eq(&self, other: &Self) -> bool {
         match (self.get_var(), other.get_var()) {
             (DictVariable::NonSlack(a), DictVariable::NonSlack(b)) => a == b,
@@ -42,9 +42,9 @@ impl PartialEq for DictVarRef {
     }
 }
 
-impl Eq for DictVarRef {}
+impl Eq for DictVar {}
 
-impl Hash for DictVarRef {
+impl Hash for DictVar {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self.get_var() {
             DictVariable::NonSlack(var) => {
@@ -59,7 +59,7 @@ impl Hash for DictVarRef {
     }
 }
 
-impl fmt::Display for DictVarRef {
+impl fmt::Display for DictVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.get_var() {
             DictVariable::NonSlack(var) => write!(f, "DictVar({})", var),
@@ -68,7 +68,7 @@ impl fmt::Display for DictVarRef {
     }
 }
 
-impl ExprVariable for DictVarRef {}
+impl ExprVariable for DictVar {}
 
-impl_expr_display!(DictVarRef);
-impl_expr_ops!(DictVarRef, [f64]);
+impl_expr_display!(DictVar);
+impl_expr_ops!(DictVar, [f64]);

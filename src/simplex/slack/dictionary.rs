@@ -5,14 +5,14 @@ use crate::{
     standardization::{standard_model::StandardModel, standard_variable::StdVar},
 };
 
-use super::{dict_entry::DictEntryRef, dict_variable::DictVarRef};
+use super::{dict_entry::DictEntryRef, dict_variable::DictVar};
 
 #[derive(Debug, Clone)]
 pub struct SlackDictionary {
-    objective: LinearExpr<DictVarRef>,
+    objective: LinearExpr<DictVar>,
     entries: Vec<DictEntryRef>,
-    non_basic_entries: HashMap<DictVarRef, Vec<DictEntryRef>>,
-    variable_map: HashMap<StdVar, DictVarRef>,
+    non_basic_entries: HashMap<DictVar, Vec<DictEntryRef>>,
+    variable_map: HashMap<StdVar, DictVar>,
 }
 
 impl SlackDictionary {
@@ -20,7 +20,7 @@ impl SlackDictionary {
         let variable_map = standard_model
             .get_variables()
             .iter()
-            .map(|var| (var.clone(), DictVarRef::new_non_slack(var.clone())))
+            .map(|var| (var.clone(), DictVar::new_non_slack(var.clone())))
             .collect::<HashMap<_, _>>();
 
         let entries = standard_model
@@ -29,7 +29,7 @@ impl SlackDictionary {
             .enumerate()
             .map(|(idx, constr)| {
                 DictEntryRef::new(
-                    DictVarRef::new_slack(idx),
+                    DictVar::new_slack(idx),
                     Self::transform_expression(
                         &(constr.get_rhs() - constr.get_lhs()),
                         &variable_map,
@@ -65,18 +65,15 @@ impl SlackDictionary {
         }
     }
 
-    pub fn set_objective(&mut self, objective: LinearExpr<DictVarRef>) {
+    pub fn set_objective(&mut self, objective: LinearExpr<DictVar>) {
         self.objective = objective;
     }
 
-    pub fn replace_objective(
-        &mut self,
-        new_objective: LinearExpr<DictVarRef>,
-    ) -> LinearExpr<DictVarRef> {
+    pub fn replace_objective(&mut self, new_objective: LinearExpr<DictVar>) -> LinearExpr<DictVar> {
         mem::replace(&mut self.objective, new_objective)
     }
 
-    pub fn get_objective(&self) -> &LinearExpr<DictVarRef> {
+    pub fn get_objective(&self) -> &LinearExpr<DictVar> {
         &self.objective
     }
 
@@ -84,7 +81,7 @@ impl SlackDictionary {
         &self.entries
     }
 
-    pub fn get_variable_map(&self) -> &HashMap<StdVar, DictVarRef> {
+    pub fn get_variable_map(&self) -> &HashMap<StdVar, DictVar> {
         &self.variable_map
     }
 
@@ -92,7 +89,7 @@ impl SlackDictionary {
         self.objective.constant
     }
 
-    pub fn get_basic_values(&self) -> HashMap<DictVarRef, f64> {
+    pub fn get_basic_values(&self) -> HashMap<DictVar, f64> {
         self.entries
             .iter()
             .map(|entry| (entry.get_basic_var().clone(), entry.get_value()))
@@ -120,7 +117,7 @@ impl SlackDictionary {
             .collect()
     }
 
-    pub fn add_var_to_all_entries(&mut self, var: DictVarRef, coefficient: f64) {
+    pub fn add_var_to_all_entries(&mut self, var: DictVar, coefficient: f64) {
         for entry in self.entries.iter_mut() {
             entry.add_non_basic(var.clone(), coefficient);
             self.non_basic_entries
@@ -130,14 +127,14 @@ impl SlackDictionary {
         }
     }
 
-    pub fn remove_var_from_all_entries(&mut self, var: DictVarRef) {
+    pub fn remove_var_from_all_entries(&mut self, var: DictVar) {
         for entry in self.entries.iter_mut() {
             entry.remove_non_basic(var.clone());
             self.non_basic_entries.remove(&var);
         }
     }
 
-    pub fn pivot(&mut self, entering: &DictVarRef, leaving: &DictEntryRef) {
+    pub fn pivot(&mut self, entering: &DictVar, leaving: &DictEntryRef) {
         leaving.switch_to_basic(entering.clone());
         let leaving_expr = leaving.get_expr();
 
@@ -158,13 +155,13 @@ impl SlackDictionary {
 
     fn transform_expression(
         expression: &LinearExpr<StdVar>,
-        variable_map: &HashMap<StdVar, DictVarRef>,
-    ) -> LinearExpr<DictVarRef> {
+        variable_map: &HashMap<StdVar, DictVar>,
+    ) -> LinearExpr<DictVar> {
         let std_terms = expression
             .terms
             .iter()
             .map(|(var, &coefficient)| (variable_map.get(var).unwrap().clone(), coefficient))
-            .collect::<HashMap<DictVarRef, f64>>();
+            .collect::<HashMap<DictVar, f64>>();
 
         LinearExpr::with_terms_and_constant(std_terms, expression.constant)
     }

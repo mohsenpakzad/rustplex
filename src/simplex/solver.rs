@@ -10,7 +10,7 @@ use super::{
     config::SolverConfig,
     slack::{
         dict_entry::DictEntryRef,
-        dict_variable::{DictVarRef, DictVariable},
+        dict_variable::{DictVar, DictVariable},
         dictionary::SlackDictionary,
     },
     solution::SolverSolution,
@@ -70,8 +70,8 @@ impl SimplexSolver {
             .any(|entry| entry.get_value() < self.config.neg_tolerance())
     }
 
-    fn create_auxiliary_problem(&mut self) -> (DictVarRef, LinearExpr<DictVarRef>) {
-        let aux_var = DictVarRef::new_non_slack(StdVar::default().name("Aux"));
+    fn create_auxiliary_problem(&mut self) -> (DictVar, LinearExpr<DictVar>) {
+        let aux_var = DictVar::new_non_slack(StdVar::default().name("Aux"));
 
         let original_objective = self
             .slack_dict
@@ -84,8 +84,8 @@ impl SimplexSolver {
 
     fn prepare_phase_two(
         &mut self,
-        aux_var: DictVarRef,
-        mut original_objective: LinearExpr<DictVarRef>,
+        aux_var: DictVar,
+        mut original_objective: LinearExpr<DictVar>,
     ) {
         self.slack_dict.remove_var_from_all_entries(aux_var);
 
@@ -95,7 +95,7 @@ impl SimplexSolver {
         self.slack_dict.set_objective(original_objective);
     }
 
-    fn solve_phase1(&mut self, aux_var: DictVarRef) -> SolverStatus {
+    fn solve_phase1(&mut self, aux_var: DictVar) -> SolverStatus {
         self.iteration_count += 1;
         let leaving = self.find_phase1_initial_leaving_variable();
 
@@ -121,7 +121,7 @@ impl SimplexSolver {
         SolverStatus::MaxIterationsReached
     }
 
-    fn find_entering_variable(&self) -> Option<DictVarRef> {
+    fn find_entering_variable(&self) -> Option<DictVar> {
         self.slack_dict
             .get_objective()
             .terms
@@ -134,7 +134,7 @@ impl SimplexSolver {
             .map(|(var, _)| var.clone())
     }
 
-    fn find_leaving_variable(&self, entering: &DictVarRef) -> Option<DictEntryRef> {
+    fn find_leaving_variable(&self, entering: &DictVar) -> Option<DictEntryRef> {
         self.slack_dict
             .get_entires()
             .iter()
@@ -163,7 +163,7 @@ impl SimplexSolver {
             .unwrap()
     }
 
-    fn compare_variables(var1: &DictVarRef, var2: &DictVarRef) -> cmp::Ordering {
+    fn compare_variables(var1: &DictVar, var2: &DictVar) -> cmp::Ordering {
         match (var1.get_var(), var2.get_var()) {
             (DictVariable::NonSlack(_), DictVariable::Slack(_)) => cmp::Ordering::Greater,
             (DictVariable::Slack(_), DictVariable::NonSlack(_)) => cmp::Ordering::Less,
