@@ -101,15 +101,19 @@ impl StandardModel {
     }
 
     /// Add a constraint in standard form: lhs ≤ rhs_constant
-    pub fn add_constraint(&mut self, lhs: LinearExpr<StdVarRef>, rhs: f64) -> StdConstrRef {
-        let std_constr = StdConstrRef::new(lhs, rhs);
+    pub fn add_constraint(
+        &mut self,
+        lhs: impl Into<LinearExpr<StdVarRef>>,
+        rhs: f64,
+    ) -> StdConstrRef {
+        let std_constr = StdConstrRef::new(lhs.into(), rhs);
         self.constraints.push(std_constr.clone());
         std_constr
     }
 
     /// Set the maximization objective
-    pub fn set_objective(&mut self, expression: LinearExpr<StdVarRef>) {
-        self.objective = Some(StandardObjective::new(expression));
+    pub fn set_objective(&mut self, expression: impl Into<LinearExpr<StdVarRef>>) {
+        self.objective = Some(StandardObjective::new(expression.into()));
     }
 
     pub fn solve(&mut self) {
