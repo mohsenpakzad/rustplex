@@ -3,7 +3,7 @@ use std::{cmp, time::Instant};
 
 use crate::{
     core::expression::LinearExpr,
-    standardization::{standard_model::StandardModel, standard_variable::StdVarRef},
+    standardization::{standard_model::StandardModel, standard_variable::StdVar},
 };
 
 use super::{
@@ -38,7 +38,7 @@ impl SimplexSolver {
         }
     }
 
-    pub fn start(&mut self) -> SolverSolution<StdVarRef> {
+    pub fn start(&mut self) -> SolverSolution<StdVar> {
         let start_time = Instant::now();
         if self.needs_phase_one() {
             let (aux_var, original_objective) = self.create_auxiliary_problem();
@@ -71,7 +71,7 @@ impl SimplexSolver {
     }
 
     fn create_auxiliary_problem(&mut self) -> (DictVarRef, LinearExpr<DictVarRef>) {
-        let aux_var = DictVarRef::new_non_slack(StdVarRef::default().name("Aux"));
+        let aux_var = DictVarRef::new_non_slack(StdVar::default().name("Aux"));
 
         let original_objective = self
             .slack_dict

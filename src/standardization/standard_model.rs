@@ -13,21 +13,21 @@ use crate::{
 
 use super::{
     standard_constraint::StdConstrRef, standard_objective::StandardObjective,
-    standard_variable::StdVarRef,
+    standard_variable::StdVar,
 };
 
 /// A model that enforces standard form constraints
 #[derive(Debug, Default)]
 pub struct StandardModel {
-    variables: Vec<StdVarRef>,
+    variables: Vec<StdVar>,
     constraints: Vec<StdConstrRef>,
     objective: Option<StandardObjective>,
     variable_map: Option<VariableMap>,
-    solution: SolverSolution<StdVarRef>,
+    solution: SolverSolution<StdVar>,
     config: Option<SolverConfig>,
 }
 
-type VariableMap = HashMap<Var, (Option<StdVarRef>, Option<StdVarRef>)>;
+type VariableMap = HashMap<Var, (Option<StdVar>, Option<StdVar>)>;
 
 impl StandardModel {
     pub fn new() -> Self {
@@ -94,25 +94,21 @@ impl StandardModel {
     }
 
     /// Add a new non-negative variable
-    pub fn add_variable(&mut self) -> StdVarRef {
-        let std_var = StdVarRef::new();
+    pub fn add_variable(&mut self) -> StdVar {
+        let std_var = StdVar::new();
         self.variables.push(std_var.clone());
         std_var
     }
 
     /// Add a constraint in standard form: lhs ≤ rhs_constant
-    pub fn add_constraint(
-        &mut self,
-        lhs: impl Into<LinearExpr<StdVarRef>>,
-        rhs: f64,
-    ) -> StdConstrRef {
+    pub fn add_constraint(&mut self, lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> StdConstrRef {
         let std_constr = StdConstrRef::new(lhs.into(), rhs);
         self.constraints.push(std_constr.clone());
         std_constr
     }
 
     /// Set the maximization objective
-    pub fn set_objective(&mut self, expression: impl Into<LinearExpr<StdVarRef>>) {
+    pub fn set_objective(&mut self, expression: impl Into<LinearExpr<StdVar>>) {
         self.objective = Some(StandardObjective::new(expression.into()));
     }
 
@@ -122,7 +118,7 @@ impl StandardModel {
         self.solution = solver.start();
     }
 
-    pub fn get_variables(&self) -> &Vec<StdVarRef> {
+    pub fn get_variables(&self) -> &Vec<StdVar> {
         &self.variables
     }
 
@@ -134,7 +130,7 @@ impl StandardModel {
         &self.objective
     }
 
-    pub fn get_solution(&self) -> &SolverSolution<StdVarRef> {
+    pub fn get_solution(&self) -> &SolverSolution<StdVar> {
         &self.solution
     }
 
@@ -171,17 +167,13 @@ impl StandardModel {
     }
 
     /// Standardize a variable into standard form (non-negative variables)
-    fn standardize_variable(var: &Var) -> (Option<StdVarRef>, Option<StdVarRef>) {
+    fn standardize_variable(var: &Var) -> (Option<StdVar>, Option<StdVar>) {
         let std_var_name = format!("FromVar: {}", var.get_name_or_default());
 
         match var.get_type() {
             VariableType::Binary => (
                 // Binary variables are converted to a non-negative variable with upper bound of 1
-                Some(
-                    StdVarRef::new_positive()
-                        .name(std_var_name)
-                        .upper_bound(1.0),
-                ),
+                Some(StdVar::new_positive().name(std_var_name).upper_bound(1.0)),
                 None,
             ),
             VariableType::Integer | VariableType::Continuous => {
@@ -191,37 +183,33 @@ impl StandardModel {
                 match (lb, ub) {
                     // Case 1: Lower bound is 0, create non-negative variable with optional upper bound
                     (0.0, _) => (
-                        Some(StdVarRef::new_positive().name(std_var_name).upper_bound(ub)),
+                        Some(StdVar::new_positive().name(std_var_name).upper_bound(ub)),
                         None,
                     ),
                     // Case 2: Upper bound is 0, create non-positive variable
                     (_, 0.0) => (
                         None,
-                        Some(
-                            StdVarRef::new_negative()
-                                .name(std_var_name)
-                                .upper_bound(-lb),
-                        ),
+                        Some(StdVar::new_negative().name(std_var_name).upper_bound(-lb)),
                     ),
                     // Case 3: Unbounded variable, split into positive and negative parts
                     (f64::NEG_INFINITY, f64::INFINITY) => (
-                        Some(StdVarRef::new_positive().name(std_var_name.clone())),
-                        Some(StdVarRef::new_negative().name(std_var_name)),
+                        Some(StdVar::new_positive().name(std_var_name.clone())),
+                        Some(StdVar::new_negative().name(std_var_name)),
                     ),
                     // Case 4: Lower bound is negative infinity, create shifted negative variable
                     (f64::NEG_INFINITY, _) => (
                         None,
-                        Some(StdVarRef::new_negative().name(std_var_name).shift(ub)),
+                        Some(StdVar::new_negative().name(std_var_name).shift(ub)),
                     ),
                     // Case 5: Upper bound is infinity, create shifted positive variable
                     (_, f64::INFINITY) => (
-                        Some(StdVarRef::new_positive().name(std_var_name).shift(lb)),
+                        Some(StdVar::new_positive().name(std_var_name).shift(lb)),
                         None,
                     ),
                     // Case 6: Bounded variable within finite range, create shifted positive variable
                     _ => (
                         Some(
-                            StdVarRef::new_positive()
+                            StdVar::new_positive()
                                 .name(std_var_name)
                                 .shift(lb)
                                 .upper_bound(ub - lb),
@@ -275,7 +263,7 @@ impl StandardModel {
     fn standardize_expression(
         expression: &LinearExpr<Var>,
         variable_map: &VariableMap,
-    ) -> LinearExpr<StdVarRef> {
+    ) -> LinearExpr<StdVar> {
         let mut std_terms = HashMap::new();
         let mut shift = 0.0;
 

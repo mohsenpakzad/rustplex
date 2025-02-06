@@ -2,19 +2,19 @@ use std::fmt;
 
 use crate::core::{expression::LinearExpr, objective::ObjectiveSense};
 
-use super::standard_variable::StdVarRef;
+use super::standard_variable::StdVar;
 
 #[derive(Debug, Clone)]
 pub struct StandardObjective {
-    expression: LinearExpr<StdVarRef>,
+    expression: LinearExpr<StdVar>,
 }
 
 impl StandardObjective {
-    pub fn new(expression: LinearExpr<StdVarRef>) -> Self {
+    pub fn new(expression: LinearExpr<StdVar>) -> Self {
         Self { expression }
     }
 
-    pub fn from_sense(sense: &ObjectiveSense, expression: LinearExpr<StdVarRef>) -> Self {
+    pub fn from_sense(sense: &ObjectiveSense, expression: LinearExpr<StdVar>) -> Self {
         Self {
             expression: match sense {
                 ObjectiveSense::Minimize => -expression,
@@ -23,7 +23,7 @@ impl StandardObjective {
         }
     }
 
-    pub fn get_expr(&self) -> &LinearExpr<StdVarRef> {
+    pub fn get_expr(&self) -> &LinearExpr<StdVar> {
         &self.expression
     }
 }

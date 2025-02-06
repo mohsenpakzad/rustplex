@@ -6,12 +6,12 @@ use std::{
 
 use crate::{
     core::expression::{impl_expr_display, impl_expr_ops, ExprVariable},
-    standardization::standard_variable::StdVarRef,
+    standardization::standard_variable::StdVar,
 };
 
 #[derive(Debug, Clone)]
 pub enum DictVariable {
-    NonSlack(StdVarRef),
+    NonSlack(StdVar),
     Slack(usize),
 }
 
@@ -19,7 +19,7 @@ pub enum DictVariable {
 pub struct DictVarRef(Rc<DictVariable>);
 
 impl DictVarRef {
-    pub fn new_non_slack(var: StdVarRef) -> Self {
+    pub fn new_non_slack(var: StdVar) -> Self {
         DictVarRef(Rc::new(DictVariable::NonSlack(var)))
     }
 

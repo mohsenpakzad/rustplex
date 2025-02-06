@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt, mem};
 
 use crate::{
     core::expression::LinearExpr,
-    standardization::{standard_model::StandardModel, standard_variable::StdVarRef},
+    standardization::{standard_model::StandardModel, standard_variable::StdVar},
 };
 
 use super::{dict_entry::DictEntryRef, dict_variable::DictVarRef};
@@ -12,7 +12,7 @@ pub struct SlackDictionary {
     objective: LinearExpr<DictVarRef>,
     entries: Vec<DictEntryRef>,
     non_basic_entries: HashMap<DictVarRef, Vec<DictEntryRef>>,
-    variable_map: HashMap<StdVarRef, DictVarRef>,
+    variable_map: HashMap<StdVar, DictVarRef>,
 }
 
 impl SlackDictionary {
@@ -84,7 +84,7 @@ impl SlackDictionary {
         &self.entries
     }
 
-    pub fn get_variable_map(&self) -> &HashMap<StdVarRef, DictVarRef> {
+    pub fn get_variable_map(&self) -> &HashMap<StdVar, DictVarRef> {
         &self.variable_map
     }
 
@@ -99,7 +99,7 @@ impl SlackDictionary {
             .collect()
     }
 
-    pub fn get_std_values(&self) -> HashMap<StdVarRef, f64> {
+    pub fn get_std_values(&self) -> HashMap<StdVar, f64> {
         let basic_to_entry = self
             .entries
             .iter()
@@ -157,8 +157,8 @@ impl SlackDictionary {
     }
 
     fn transform_expression(
-        expression: &LinearExpr<StdVarRef>,
-        variable_map: &HashMap<StdVarRef, DictVarRef>,
+        expression: &LinearExpr<StdVar>,
+        variable_map: &HashMap<StdVar, DictVarRef>,
     ) -> LinearExpr<DictVarRef> {
         let std_terms = expression
             .terms

@@ -23,9 +23,9 @@ impl Default for StandardVariable {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct StdVarRef(Rc<RefCell<StandardVariable>>);
+pub struct StdVar(Rc<RefCell<StandardVariable>>);
 
-impl StdVarRef {
+impl StdVar {
     pub fn new() -> Self {
         Self::default()
     }
@@ -83,21 +83,21 @@ impl StdVarRef {
     }
 }
 
-impl PartialEq for StdVarRef {
+impl PartialEq for StdVar {
     fn eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.0, &other.0)
     }
 }
 
-impl Eq for StdVarRef {}
+impl Eq for StdVar {}
 
-impl Hash for StdVarRef {
+impl Hash for StdVar {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (Rc::as_ptr(&self.0) as usize).hash(state);
     }
 }
 
-impl fmt::Display for StdVarRef {
+impl fmt::Display for StdVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name_display = match self.get_name() {
             Some(name) => name.clone(),
@@ -114,7 +114,7 @@ impl fmt::Display for StdVarRef {
     }
 }
 
-impl ExprVariable for StdVarRef {}
+impl ExprVariable for StdVar {}
 
-impl_expr_display!(StdVarRef);
-impl_expr_ops!(StdVarRef, [f64, f32, i8, i16, i32, i64, i128, isize]);
+impl_expr_display!(StdVar);
+impl_expr_ops!(StdVar, [f64, f32, i8, i16, i32, i64, i128, isize]);

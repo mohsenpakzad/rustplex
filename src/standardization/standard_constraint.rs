@@ -1,12 +1,12 @@
 use crate::core::expression::LinearExpr;
 use std::{cell::RefCell, fmt, rc::Rc};
 
-use super::standard_variable::StdVarRef;
+use super::standard_variable::StdVar;
 
 #[derive(Debug)]
 struct StandardConstraint {
     name: Option<String>,
-    lhs: LinearExpr<StdVarRef>,
+    lhs: LinearExpr<StdVar>,
     rhs: f64,
 }
 
@@ -14,7 +14,7 @@ struct StandardConstraint {
 pub struct StdConstrRef(Rc<RefCell<StandardConstraint>>);
 
 impl StdConstrRef {
-    pub fn new(lhs: impl Into<LinearExpr<StdVarRef>>, rhs: f64) -> Self {
+    pub fn new(lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> Self {
         Self(Rc::new(RefCell::new(StandardConstraint {
             name: None,
             lhs: lhs.into(),
@@ -39,7 +39,7 @@ impl StdConstrRef {
             .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
     }
 
-    pub fn get_lhs(&self) -> LinearExpr<StdVarRef> {
+    pub fn get_lhs(&self) -> LinearExpr<StdVar> {
         self.0.borrow().lhs.clone()
     }
 
