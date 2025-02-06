@@ -153,7 +153,7 @@ impl StandardModel {
                         pos_value - neg_value
                     }
                     (Some(pos), None) => solution_values.get(pos).unwrap() + pos.get_shift(),
-                    (None, Some(neg)) => -(solution_values.get(neg).unwrap() + neg.get_shift()),
+                    (None, Some(neg)) => -solution_values.get(neg).unwrap() + neg.get_shift(),
                     _ => 0.0,
                 };
                 (var.clone(), value)
