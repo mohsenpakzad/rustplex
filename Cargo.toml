@@ -2,5 +2,11 @@
 name = "rustplex"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "A linear programming solver based on the Simplex algorithm for Rust"
+authors = ["Mohsen Pakzad <mohsen.pakzad99@gmail.com>"]
+keywords = ["rustplex", "lp-solver", "linear-programming", "simplex"]
+repository = "https://github.com/mohsenpakzad/rustplex"
+readme = "README.md"
 
 [dependencies]
