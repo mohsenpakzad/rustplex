@@ -5,7 +5,7 @@ use crate::{
         constraint::{ConstrRef, ConstraintSense},
         expression::LinearExpr,
         objective::{Objective, ObjectiveSense},
-        variable::VarRef,
+        variable::Var,
     },
     simplex::{config::SolverConfig, solution::SolverSolution},
     standardization::standard_model::StandardModel,
@@ -15,10 +15,10 @@ use super::variable::VariableType;
 
 #[derive(Debug, Default)]
 pub struct Model {
-    variables: Vec<VarRef>,
+    variables: Vec<Var>,
     constraints: Vec<ConstrRef>,
     objective: Option<Objective>,
-    solution: SolverSolution<VarRef>,
+    solution: SolverSolution<Var>,
     config: Option<SolverConfig>,
 }
 
@@ -32,28 +32,24 @@ impl Model {
         self
     }
 
-    pub fn add_variable(&mut self) -> VarRef {
-        let var = VarRef::new();
+    pub fn add_variable(&mut self) -> Var {
+        let var = Var::new();
         self.variables.push(var.clone());
         var
     }
 
     pub fn add_constraint(
         &mut self,
-        lhs: impl Into<LinearExpr<VarRef>>,
+        lhs: impl Into<LinearExpr<Var>>,
         sense: ConstraintSense,
-        rhs: impl Into<LinearExpr<VarRef>>,
+        rhs: impl Into<LinearExpr<Var>>,
     ) -> ConstrRef {
         let constr = ConstrRef::new(lhs.into(), sense, rhs.into());
         self.constraints.push(constr.clone());
         constr
     }
 
-    pub fn set_objective(
-        &mut self,
-        sense: ObjectiveSense,
-        expression: impl Into<LinearExpr<VarRef>>,
-    ) {
+    pub fn set_objective(&mut self, sense: ObjectiveSense, expression: impl Into<LinearExpr<Var>>) {
         self.objective = Some(Objective::new(sense, expression.into()));
     }
 
@@ -79,7 +75,7 @@ impl Model {
         self.solution = standardized_model.get_model_solution().unwrap()
     }
 
-    pub fn get_variables(&self) -> &Vec<VarRef> {
+    pub fn get_variables(&self) -> &Vec<Var> {
         &self.variables
     }
 
@@ -91,7 +87,7 @@ impl Model {
         &self.objective
     }
 
-    pub fn get_solution(&self) -> &SolverSolution<VarRef> {
+    pub fn get_solution(&self) -> &SolverSolution<Var> {
         &self.solution
     }
 }

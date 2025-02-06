@@ -31,9 +31,9 @@ impl Default for Variable {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct VarRef(Rc<RefCell<Variable>>);
+pub struct Var(Rc<RefCell<Variable>>);
 
-impl VarRef {
+impl Var {
     pub fn new() -> Self {
         Self::default()
     }
@@ -108,21 +108,21 @@ impl VarRef {
     }
 }
 
-impl PartialEq for VarRef {
+impl PartialEq for Var {
     fn eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.0, &other.0)
     }
 }
 
-impl Eq for VarRef {}
+impl Eq for Var {}
 
-impl Hash for VarRef {
+impl Hash for Var {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (Rc::as_ptr(&self.0) as usize).hash(state);
     }
 }
 
-impl fmt::Display for VarRef {
+impl fmt::Display for Var {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name_display = match self.get_name() {
             Some(name) => name.clone(),
@@ -133,7 +133,7 @@ impl fmt::Display for VarRef {
     }
 }
 
-impl ExprVariable for VarRef {}
+impl ExprVariable for Var {}
 
-impl_expr_display!(VarRef);
-impl_expr_ops!(VarRef, [f64, f32, i8, i16, i32, i64, i128, isize]);
+impl_expr_display!(Var);
+impl_expr_ops!(Var, [f64, f32, i8, i16, i32, i64, i128, isize]);

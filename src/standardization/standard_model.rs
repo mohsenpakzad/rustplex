@@ -6,7 +6,7 @@ use crate::{
         expression::LinearExpr,
         model::Model,
         objective::Objective,
-        variable::{VarRef, VariableType},
+        variable::{Var, VariableType},
     },
     simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
 };
@@ -27,7 +27,7 @@ pub struct StandardModel {
     config: Option<SolverConfig>,
 }
 
-type VariableMap = HashMap<VarRef, (Option<StdVarRef>, Option<StdVarRef>)>;
+type VariableMap = HashMap<Var, (Option<StdVarRef>, Option<StdVarRef>)>;
 
 impl StandardModel {
     pub fn new() -> Self {
@@ -138,7 +138,7 @@ impl StandardModel {
         &self.solution
     }
 
-    pub fn get_model_solution(&self) -> Option<SolverSolution<VarRef>> {
+    pub fn get_model_solution(&self) -> Option<SolverSolution<Var>> {
         let variable_map = self.variable_map.as_ref()?;
 
         let solution_values = self.solution.get_variable_values();
@@ -171,7 +171,7 @@ impl StandardModel {
     }
 
     /// Standardize a variable into standard form (non-negative variables)
-    fn standardize_variable(var: &VarRef) -> (Option<StdVarRef>, Option<StdVarRef>) {
+    fn standardize_variable(var: &Var) -> (Option<StdVarRef>, Option<StdVarRef>) {
         let std_var_name = format!("FromVar: {}", var.get_name_or_default());
 
         match var.get_type() {
@@ -273,7 +273,7 @@ impl StandardModel {
 
     /// Standardize a linear expression into standard form
     fn standardize_expression(
-        expression: &LinearExpr<VarRef>,
+        expression: &LinearExpr<Var>,
         variable_map: &VariableMap,
     ) -> LinearExpr<StdVarRef> {
         let mut std_terms = HashMap::new();

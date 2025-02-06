@@ -2,14 +2,14 @@ use std::{cell::RefCell, fmt, rc::Rc};
 
 use crate::core::expression::LinearExpr;
 
-use super::variable::VarRef;
+use super::variable::Var;
 
 #[derive(Debug, Clone)]
 struct Constraint {
     name: Option<String>,
-    lhs: LinearExpr<VarRef>,
+    lhs: LinearExpr<Var>,
     sense: ConstraintSense,
-    rhs: LinearExpr<VarRef>,
+    rhs: LinearExpr<Var>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -24,9 +24,9 @@ pub struct ConstrRef(Rc<RefCell<Constraint>>);
 
 impl ConstrRef {
     pub fn new(
-        lhs: impl Into<LinearExpr<VarRef>>,
+        lhs: impl Into<LinearExpr<Var>>,
         sense: ConstraintSense,
-        rhs: impl Into<LinearExpr<VarRef>>,
+        rhs: impl Into<LinearExpr<Var>>,
     ) -> Self {
         Self(Rc::new(RefCell::new(Constraint {
             name: None,
@@ -57,11 +57,11 @@ impl ConstrRef {
         self.0.borrow().sense.clone()
     }
 
-    pub fn get_lhs(&self) -> LinearExpr<VarRef> {
+    pub fn get_lhs(&self) -> LinearExpr<Var> {
         self.0.borrow().lhs.clone()
     }
 
-    pub fn get_rhs(&self) -> LinearExpr<VarRef> {
+    pub fn get_rhs(&self) -> LinearExpr<Var> {
         self.0.borrow().rhs.clone()
     }
 }
