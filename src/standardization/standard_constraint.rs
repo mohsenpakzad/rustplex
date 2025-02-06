@@ -11,9 +11,9 @@ struct StandardConstraint {
 }
 
 #[derive(Debug)]
-pub struct StdConstrRef(Rc<RefCell<StandardConstraint>>);
+pub struct StdConstr(Rc<RefCell<StandardConstraint>>);
 
-impl StdConstrRef {
+impl StdConstr {
     pub fn new(lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> Self {
         Self(Rc::new(RefCell::new(StandardConstraint {
             name: None,
@@ -48,13 +48,13 @@ impl StdConstrRef {
     }
 }
 
-impl Clone for StdConstrRef {
+impl Clone for StdConstr {
     fn clone(&self) -> Self {
-        StdConstrRef(Rc::clone(&self.0))
+        StdConstr(Rc::clone(&self.0))
     }
 }
 
-impl fmt::Display for StdConstrRef {
+impl fmt::Display for StdConstr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name_display = match self.get_name() {
             Some(name) => name.clone(),

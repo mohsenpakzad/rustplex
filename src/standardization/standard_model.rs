@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    standard_constraint::StdConstrRef, standard_objective::StandardObjective,
+    standard_constraint::StdConstr, standard_objective::StandardObjective,
     standard_variable::StdVar,
 };
 
@@ -20,7 +20,7 @@ use super::{
 #[derive(Debug, Default)]
 pub struct StandardModel {
     variables: Vec<StdVar>,
-    constraints: Vec<StdConstrRef>,
+    constraints: Vec<StdConstr>,
     objective: Option<StandardObjective>,
     variable_map: Option<VariableMap>,
     solution: SolverSolution<StdVar>,
@@ -62,7 +62,7 @@ impl StandardModel {
                 // Create upper bound constraints for variables
                 let ub = std_var.get_upper_bound();
                 if ub < f64::INFINITY {
-                    Some(StdConstrRef::new(
+                    Some(StdConstr::new(
                         LinearExpr::with_term(std_var.clone(), 1.0),
                         ub,
                     ))
@@ -101,8 +101,8 @@ impl StandardModel {
     }
 
     /// Add a constraint in standard form: lhs ≤ rhs_constant
-    pub fn add_constraint(&mut self, lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> StdConstrRef {
-        let std_constr = StdConstrRef::new(lhs.into(), rhs);
+    pub fn add_constraint(&mut self, lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> StdConstr {
+        let std_constr = StdConstr::new(lhs.into(), rhs);
         self.constraints.push(std_constr.clone());
         std_constr
     }
@@ -122,7 +122,7 @@ impl StandardModel {
         &self.variables
     }
 
-    pub fn get_constraints(&self) -> &Vec<StdConstrRef> {
+    pub fn get_constraints(&self) -> &Vec<StdConstr> {
         &self.constraints
     }
 
@@ -222,7 +222,7 @@ impl StandardModel {
     }
 
     /// Standardize a single constraint into standard form (ax ≤ b)
-    fn standardize_constraint(constr: &Constr, variable_map: &VariableMap) -> Vec<StdConstrRef> {
+    fn standardize_constraint(constr: &Constr, variable_map: &VariableMap) -> Vec<StdConstr> {
         let std_constr_name = format!("FromConstr: {}", constr.get_name_or_default());
         // Move everything to LHS, constant to RHS
         let mut std_lhs = Self::standardize_expression(
@@ -235,17 +235,17 @@ impl StandardModel {
         match constr.get_sense() {
             ConstraintSense::LessEqual => {
                 // Already in correct form
-                vec![StdConstrRef::new(std_lhs, std_rhs).name(std_constr_name)]
+                vec![StdConstr::new(std_lhs, std_rhs).name(std_constr_name)]
             }
             ConstraintSense::GreaterEqual => {
                 // Multiply by -1 to convert to ≤
-                vec![StdConstrRef::new(-std_lhs, -std_rhs).name(std_constr_name)]
+                vec![StdConstr::new(-std_lhs, -std_rhs).name(std_constr_name)]
             }
             ConstraintSense::Equal => {
                 // Split into x ≤ b and -x ≤ -b
                 vec![
-                    StdConstrRef::new(std_lhs.clone(), std_rhs).name(std_constr_name.clone()),
-                    StdConstrRef::new(-std_lhs, -std_rhs).name(std_constr_name),
+                    StdConstr::new(std_lhs.clone(), std_rhs).name(std_constr_name.clone()),
+                    StdConstr::new(-std_lhs, -std_rhs).name(std_constr_name),
                 ]
             }
         }
