@@ -3,8 +3,4 @@ name = "rustplex"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
-members = ["rustplex-macros"]
-
 [dependencies]
-rustplex-macros = { path = "./rustplex-macros" }
