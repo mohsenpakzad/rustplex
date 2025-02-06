@@ -73,7 +73,9 @@ impl SimplexSolver {
     fn create_auxiliary_problem(&mut self) -> (DictVarRef, LinearExpr<DictVarRef>) {
         let aux_var = DictVarRef::new_non_slack(StdVarRef::default().name("Aux"));
 
-        let original_objective = self.slack_dict.replace_objective(-1.0 * aux_var.clone());
+        let original_objective = self
+            .slack_dict
+            .replace_objective(LinearExpr::with_term(aux_var.clone(), -1.0));
 
         self.slack_dict.add_var_to_all_entries(aux_var.clone(), 1.0);
 

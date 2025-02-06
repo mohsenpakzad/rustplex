@@ -62,7 +62,10 @@ impl StandardModel {
                 // Create upper bound constraints for variables
                 let ub = std_var.get_upper_bound();
                 if ub < f64::INFINITY {
-                    Some(StdConstrRef::new(std_var.clone(), ub))
+                    Some(StdConstrRef::new(
+                        LinearExpr::with_term(std_var.clone(), 1.0),
+                        ub,
+                    ))
                 } else {
                     None
                 }
