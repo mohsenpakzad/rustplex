@@ -126,7 +126,7 @@ impl SimplexSolver {
             .get_objective()
             .terms
             .iter()
-            .filter(|(_, &coefficient)| coefficient > *self.config.tolerance())
+            .filter(|&(_, &coefficient)| coefficient > *self.config.tolerance())
             .max_by(|(v1, c1), (v2, c2)| {
                 c1.total_cmp(c2) // Compare coefficients first
                     .then_with(|| Self::compare_variables(v1, v2)) // Break ties by variable type
