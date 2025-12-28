@@ -47,30 +47,30 @@ The solver expects an LP problem in standard form, including:
 Here is an example of how to set up and solve an LP problem:
 
 ```rust
-use rustplex::core::{constraint::ConstraintSense, model::Model, objective::ObjectiveSense};
+use rustplex::{ConstraintSense, Model, ObjectiveSense};
 
 fn main() {
     let mut model = Model::new();
 
-    let x1 = model.add_variable().name("x1").lower_bound(0.0);
-    let x2 = model.add_variable().name("x2").lower_bound(0.0);
-    let x3 = model.add_variable().name("x3").lower_bound(0.0);
+    let x1 = model.add_variable().with_name("x1").with_lower_bound(0.0);
+    let x2 = model.add_variable().with_name("x2").with_lower_bound(0.0);
+    let x3 = model.add_variable().with_name("x3").with_lower_bound(0.0);
 
     model.set_objective(
         ObjectiveSense::Maximize,
-        x1.clone() + x2.clone() + x3.clone(),
+        &x1 + &x2 + &x3,
     );
 
     model
-        .add_constraint(x1.clone(), ConstraintSense::LessEqual, 10)
-        .name("constr1");
+        .add_constraint(&x1, ConstraintSense::LessEqual, 10)
+        .with_name("constr1");
 
     model
-        .add_constraint(x2.clone() + x3.clone(), ConstraintSense::LessEqual, 5)
-        .name("constr2");
+        .add_constraint(&x2 + &x3, ConstraintSense::LessEqual, 5)
+        .with_name("constr2");
 
-    model.solve();
-
-    println!("{}", model.get_solution());
+    if model.solve().is_ok() {
+        println!("{}", model.solution());
+    }
 }
 ```
