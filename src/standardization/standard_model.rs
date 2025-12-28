@@ -9,6 +9,7 @@ use crate::{
         variable::{Var, VariableType},
     },
     simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
+    error::SolverError,
 };
 
 use super::{
@@ -112,10 +113,11 @@ impl StandardModel {
         self.objective = Some(StandardObjective::new(expression.into()));
     }
 
-    pub fn solve(&mut self) {
+    pub fn solve(&mut self) -> Result<(), SolverError> {
         let mut solver =
-            SimplexSolver::form_standard_model(&self, self.config.clone().unwrap_or_default());
+            SimplexSolver::form_standard_model(&self, self.config.clone().unwrap_or_default())?;
         self.solution = solver.start();
+        Ok(())
     }
 
     pub fn get_variables(&self) -> &Vec<StdVar> {

@@ -1,9 +1,9 @@
-use core::panic;
 use std::{cmp, time::Instant};
 
 use crate::{
     core::expression::LinearExpr,
     standardization::{standard_model::StandardModel, standard_variable::StdVar},
+    error::SolverError,
 };
 
 use super::{
@@ -24,18 +24,18 @@ pub struct SimplexSolver {
 }
 
 impl SimplexSolver {
-    pub fn form_standard_model(standard_model: &StandardModel, config: SolverConfig) -> Self {
-        if standard_model.get_objective().is_none() {
-            panic!("Objective must be set.");
+    pub fn form_standard_model(standard_model: &StandardModel, config: SolverConfig) -> Result<Self, SolverError> {
+        if standard_model.objective().is_none() {
+            return Err(SolverError::ObjectiveMissing);
         }
 
         let slack_dict = SlackDictionary::from_standard_model(standard_model);
 
-        Self {
+        Ok(Self {
             slack_dict,
             iteration_count: 0,
             config,
-        }
+        })
     }
 
     pub fn start(&mut self) -> SolverSolution<StdVar> {

@@ -9,6 +9,7 @@ use crate::{
     },
     simplex::{config::SolverConfig, solution::SolverSolution},
     standardization::standard_model::StandardModel,
+    error::SolverError,
 };
 
 use super::variable::VariableType;
@@ -64,15 +65,16 @@ impl Model {
         StandardModel::from_model(&self)
     }
 
-    pub fn solve(&mut self) {
+    pub fn solve(&mut self) -> Result<(), SolverError> {
         if !self.is_lp() {
-            todo!("Non LP calculation is not supported yet.")
+            return Err(SolverError::NonLinearNotSupported);
         }
 
         let mut standardized_model =
             StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
-        standardized_model.solve();
-        self.solution = standardized_model.get_model_solution().unwrap()
+        standardized_model.solve()?;
+        self.solution = standardized_model.get_model_solution().unwrap();
+        Ok(())
     }
 
     pub fn get_variables(&self) -> &Vec<Var> {
