@@ -38,11 +38,6 @@ impl Var {
         Self::default()
     }
 
-    pub fn name(self, name: impl Into<String>) -> Self {
-        self.0.borrow_mut().name = Some(name.into());
-        self
-    }
-
     pub fn continuous(self) -> Self {
         self.0.borrow_mut().var_type = VariableType::Continuous;
         self
@@ -62,12 +57,17 @@ impl Var {
         self
     }
 
-    pub fn bounds(self, bounds: RangeInclusive<f64>) -> Self {
+    pub fn with_name(self, name: impl Into<String>) -> Self {
+        self.0.borrow_mut().name = Some(name.into());
+        self
+    }
+
+    pub fn with_bounds(self, bounds: RangeInclusive<f64>) -> Self {
         self.0.borrow_mut().bounds = bounds;
         self
     }
 
-    pub fn lower_bound(self, lb: f64) -> Self {
+    pub fn with_lower_bound(self, lb: f64) -> Self {
         {
             let mut var: std::cell::RefMut<'_, Variable> = self.0.borrow_mut();
             var.bounds = lb..=*var.bounds.end()
@@ -75,7 +75,7 @@ impl Var {
         self
     }
 
-    pub fn upper_bound(self, ub: f64) -> Self {
+    pub fn with_upper_bound(self, ub: f64) -> Self {
         {
             let mut var: std::cell::RefMut<'_, Variable> = self.0.borrow_mut();
             var.bounds = *var.bounds.start()..=ub;
@@ -83,11 +83,11 @@ impl Var {
         self
     }
 
-    pub fn get_name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.0.borrow().name.clone()
     }
 
-    pub fn get_name_or_default(&self) -> String {
+    pub fn name_or_default(&self) -> String {
         self.0
             .borrow()
             .name
@@ -95,15 +95,15 @@ impl Var {
             .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
     }
 
-    pub fn get_type(&self) -> VariableType {
+    pub fn var_type(&self) -> VariableType {
         self.0.borrow().var_type.clone()
     }
 
-    pub fn get_lower_bound(&self) -> f64 {
+    pub fn lower_bound(&self) -> f64 {
         *self.0.borrow().bounds.start()
     }
 
-    pub fn get_upper_bound(&self) -> f64 {
+    pub fn upper_bound(&self) -> f64 {
         *self.0.borrow().bounds.end()
     }
 }
@@ -124,9 +124,9 @@ impl Hash for Var {
 
 impl fmt::Display for Var {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name_display = match self.get_name() {
+        let name_display = match self.name() {
             Some(name) => name.clone(),
-            None => self.get_name_or_default(),
+            None => self.name_or_default(),
         };
 
         write!(f, "Var({})", name_display,)

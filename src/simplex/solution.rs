@@ -51,15 +51,15 @@ impl<V> SolverSolution<V> {
         }
     }
 
-    pub fn get_status(&self) -> &SolverStatus {
+    pub fn status(&self) -> &SolverStatus {
         &self.status
     }
 
-    pub fn get_objective_value(&self) -> &Option<f64> {
+    pub fn objective_value(&self) -> &Option<f64> {
         &self.objective_value
     }
 
-    pub fn get_variable_values(&self) -> &Option<HashMap<V, f64>> {
+    pub fn variable_values(&self) -> &Option<HashMap<V, f64>> {
         &self.variable_values
     }
 }

@@ -58,7 +58,7 @@ impl Model {
         !self
             .variables
             .iter()
-            .any(|var| !matches!(var.get_type(), VariableType::Continuous))
+            .any(|var| !matches!(var.var_type(), VariableType::Continuous))
     }
 
     pub fn to_standard(&self) -> StandardModel {
@@ -73,23 +73,23 @@ impl Model {
         let mut standardized_model =
             StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
         standardized_model.solve()?;
-        self.solution = standardized_model.get_model_solution().unwrap();
+        self.solution = standardized_model.calculate_model_solution().unwrap();
         Ok(())
     }
 
-    pub fn get_variables(&self) -> &Vec<Var> {
+    pub fn variables(&self) -> &Vec<Var> {
         &self.variables
     }
 
-    pub fn get_constraints(&self) -> &Vec<Constr> {
+    pub fn constraints(&self) -> &Vec<Constr> {
         &self.constraints
     }
 
-    pub fn get_objective(&self) -> &Option<Objective> {
+    pub fn objective(&self) -> &Option<Objective> {
         &self.objective
     }
 
-    pub fn get_solution(&self) -> &SolverSolution<Var> {
+    pub fn solution(&self) -> &SolverSolution<Var> {
         &self.solution
     }
 }

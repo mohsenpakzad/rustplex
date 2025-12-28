@@ -23,7 +23,7 @@ impl StandardObjective {
         }
     }
 
-    pub fn get_expr(&self) -> &LinearExpr<StdVar> {
+    pub fn expr(&self) -> &LinearExpr<StdVar> {
         &self.expression
     }
 }

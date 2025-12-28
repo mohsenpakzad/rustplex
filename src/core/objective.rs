@@ -21,11 +21,11 @@ impl Objective {
         Self { sense, expression }
     }
 
-    pub fn get_sense(&self) -> &ObjectiveSense {
+    pub fn sense(&self) -> &ObjectiveSense {
         &self.sense
     }
 
-    pub fn get_expr(&self) -> &LinearExpr<Var> {
+    pub fn expr(&self) -> &LinearExpr<Var> {
         &self.expression
     }
 }

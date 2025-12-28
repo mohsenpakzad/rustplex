@@ -40,7 +40,7 @@ impl DictEntryRef {
         self.0.borrow_mut().non_basics_expr.remove_term(&var)
     }
 
-    pub fn get_non_basics(&self) -> Vec<DictVar> {
+    pub fn non_basics(&self) -> Vec<DictVar> {
         self.0
             .borrow()
             .non_basics_expr
@@ -51,8 +51,8 @@ impl DictEntryRef {
     }
 
     /// Retrieves the coefficient of a non-basic variable from the non-basic expression.
-    pub fn get_non_basic_coefficient(&self, var: &DictVar) -> f64 {
-        self.0.borrow().non_basics_expr.get_coefficient(var)
+    pub fn non_basic_coefficient(&self, var: &DictVar) -> f64 {
+        self.0.borrow().non_basics_expr.coefficient(var)
     }
 
     /// Replaces a non-basic variable with an expression,
@@ -85,17 +85,17 @@ impl DictEntryRef {
     }
 
     /// Gets the basic variable of the dictionary entry.
-    pub fn get_basic_var(&self) -> DictVar {
+    pub fn basic_var(&self) -> DictVar {
         self.0.borrow().basic_var.clone()
     }
 
     /// Gets the value (constant) of the dictionary entry.
-    pub fn get_value(&self) -> f64 {
+    pub fn value(&self) -> f64 {
         self.0.borrow().non_basics_expr.constant
     }
 
     /// Gets the expression of non-basic variables in the dictionary entry.
-    pub fn get_expr(&self) -> LinearExpr<DictVar> {
+    pub fn expr(&self) -> LinearExpr<DictVar> {
         self.0.borrow().non_basics_expr.clone()
     }
 }

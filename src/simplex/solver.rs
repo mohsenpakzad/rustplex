@@ -47,7 +47,7 @@ impl SimplexSolver {
 
             // Phase1 is guaranteed that has a optimal solution,
             // so no check is needed
-            if self.slack_dict.get_objective_value().abs() < *self.config.tolerance() {
+            if self.slack_dict.objective_value().abs() < *self.config.tolerance() {
                 self.prepare_phase_two(aux_var, original_objective);
             } else {
                 return SolverSolution::new_infeasible(self.iteration_count, start_time.elapsed());
@@ -56,8 +56,8 @@ impl SimplexSolver {
         let phase2_status = self.solve();
         SolverSolution::new(
             phase2_status,
-            self.slack_dict.get_objective_value(),
-            self.slack_dict.get_std_values(),
+            self.slack_dict.objective_value(),
+            self.slack_dict.std_values(),
             self.iteration_count,
             start_time.elapsed(),
         )
@@ -65,13 +65,13 @@ impl SimplexSolver {
 
     fn needs_phase_one(&self) -> bool {
         self.slack_dict
-            .get_entires()
+            .entries()
             .iter()
-            .any(|entry| entry.get_value() < self.config.neg_tolerance())
+            .any(|entry| entry.value() < self.config.neg_tolerance())
     }
 
     fn create_auxiliary_problem(&mut self) -> (DictVar, LinearExpr<DictVar>) {
-        let aux_var = DictVar::new_non_slack(StdVar::default().name("Aux"));
+        let aux_var = DictVar::new_non_slack(StdVar::default().with_name("Aux"));
 
         let original_objective = self
             .slack_dict
@@ -89,8 +89,8 @@ impl SimplexSolver {
     ) {
         self.slack_dict.remove_var_from_all_entries(aux_var);
 
-        self.slack_dict.get_entires().iter().for_each(|entry| {
-            original_objective.replace_var_with_expr(entry.get_basic_var(), &entry.get_expr());
+        self.slack_dict.entries().iter().for_each(|entry| {
+            original_objective.replace_var_with_expr(entry.basic_var(), &entry.expr());
         });
         self.slack_dict.set_objective(original_objective);
     }
@@ -123,7 +123,7 @@ impl SimplexSolver {
 
     fn find_entering_variable(&self) -> Option<DictVar> {
         self.slack_dict
-            .get_objective()
+            .objective()
             .terms
             .iter()
             .filter(|&(_, &coefficient)| coefficient > *self.config.tolerance())
@@ -136,19 +136,19 @@ impl SimplexSolver {
 
     fn find_leaving_variable(&self, entering: &DictVar) -> Option<DictEntryRef> {
         self.slack_dict
-            .get_entires()
+            .entries()
             .iter()
             .filter_map(|entry| {
-                let coefficient = entry.get_non_basic_coefficient(entering);
+                let coefficient = entry.non_basic_coefficient(entering);
                 if coefficient < self.config.neg_tolerance() {
-                    Some((entry.clone(), entry.get_value() / coefficient))
+                    Some((entry.clone(), entry.value() / coefficient))
                 } else {
                     None
                 }
             })
             .max_by(|(e1, ub1), (e2, ub2)| {
                 ub1.total_cmp(ub2) // Compare coefficients first
-                    .then_with(|| Self::compare_variables(&e1.get_basic_var(), &e2.get_basic_var()))
+                    .then_with(|| Self::compare_variables(&e1.basic_var(), &e2.basic_var()))
                 // Break ties by variable type
             })
             .map(|(e, _)| e)
@@ -156,15 +156,15 @@ impl SimplexSolver {
 
     fn find_phase1_initial_leaving_variable(&self) -> DictEntryRef {
         self.slack_dict
-            .get_entires()
+            .entries()
             .iter()
-            .min_by(|e1, e2| e1.get_value().total_cmp(&e2.get_value()))
+            .min_by(|e1, e2| e1.value().total_cmp(&e2.value()))
             .map(|entry| entry.clone())
             .unwrap()
     }
 
     fn compare_variables(var1: &DictVar, var2: &DictVar) -> cmp::Ordering {
-        match (var1.get_var(), var2.get_var()) {
+        match (var1.var(), var2.var()) {
             (DictVariable::NonSlack(_), DictVariable::Slack(_)) => cmp::Ordering::Greater,
             (DictVariable::Slack(_), DictVariable::NonSlack(_)) => cmp::Ordering::Less,
             _ => cmp::Ordering::Equal,

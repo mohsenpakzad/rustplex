@@ -36,16 +36,16 @@ impl Constr {
         })))
     }
 
-    pub fn name(self, name: impl Into<String>) -> Self {
+    pub fn with_name(self, name: impl Into<String>) -> Self {
         self.0.borrow_mut().name = Some(name.into());
         self
     }
 
-    pub fn get_name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.0.borrow().name.clone()
     }
 
-    pub fn get_name_or_default(&self) -> String {
+    pub fn name_or_default(&self) -> String {
         self.0
             .borrow()
             .name
@@ -53,27 +53,27 @@ impl Constr {
             .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
     }
 
-    pub fn get_sense(&self) -> ConstraintSense {
+    pub fn sense(&self) -> ConstraintSense {
         self.0.borrow().sense.clone()
     }
 
-    pub fn get_lhs(&self) -> LinearExpr<Var> {
+    pub fn lhs(&self) -> LinearExpr<Var> {
         self.0.borrow().lhs.clone()
     }
 
-    pub fn get_rhs(&self) -> LinearExpr<Var> {
+    pub fn rhs(&self) -> LinearExpr<Var> {
         self.0.borrow().rhs.clone()
     }
 }
 
 impl fmt::Display for Constr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let name_display = match self.get_name() {
+        let name_display = match self.name() {
             Some(name) => name.clone(),
-            None => self.get_name_or_default(),
+            None => self.name_or_default(),
         };
 
-        let sense = match self.get_sense() {
+        let sense = match self.sense() {
             ConstraintSense::LessEqual => "<=",
             ConstraintSense::GreaterEqual => ">=",
             ConstraintSense::Equal => "=",
@@ -83,9 +83,9 @@ impl fmt::Display for Constr {
             f,
             "Constr({}): {} {} {}",
             name_display,
-            self.get_lhs(),
+            self.lhs(),
             sense,
-            self.get_rhs(),
+            self.rhs(),
         )
     }
 }

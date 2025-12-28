@@ -27,14 +27,14 @@ impl DictVar {
         DictVar(Rc::new(DictVariable::Slack(idx)))
     }
 
-    pub fn get_var(&self) -> &DictVariable {
+    pub fn var(&self) -> &DictVariable {
         &self.0
     }
 }
 
 impl PartialEq for DictVar {
     fn eq(&self, other: &Self) -> bool {
-        match (self.get_var(), other.get_var()) {
+        match (self.var(), other.var()) {
             (DictVariable::NonSlack(a), DictVariable::NonSlack(b)) => a == b,
             (DictVariable::Slack(a), DictVariable::Slack(b)) => a == b,
             _ => false,
@@ -46,7 +46,7 @@ impl Eq for DictVar {}
 
 impl Hash for DictVar {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        match self.get_var() {
+        match self.var() {
             DictVariable::NonSlack(var) => {
                 0.hash(state); // Discriminant for NonSlack variant
                 var.hash(state);
@@ -61,7 +61,7 @@ impl Hash for DictVar {
 
 impl fmt::Display for DictVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.get_var() {
+        match self.var() {
             DictVariable::NonSlack(var) => write!(f, "DictVar({})", var),
             DictVariable::Slack(idx) => write!(f, "DictVar(Slack_{})", idx),
         }

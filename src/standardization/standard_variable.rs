@@ -43,26 +43,26 @@ impl StdVar {
         })))
     }
 
-    pub fn name(self, name: impl Into<String>) -> Self {
+    pub fn with_name(self, name: impl Into<String>) -> Self {
         self.0.borrow_mut().name = Some(name.into());
         self
     }
 
-    pub fn shift(self, shift: f64) -> Self {
+    pub fn with_shift(self, shift: f64) -> Self {
         self.0.borrow_mut().shift = shift;
         self
     }
 
-    pub fn upper_bound(self, ub: f64) -> Self {
+    pub fn with_upper_bound(self, ub: f64) -> Self {
         self.0.borrow_mut().upper_bound = ub;
         self
     }
 
-    pub fn get_name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.0.borrow().name.clone()
     }
 
-    pub fn get_name_or_default(&self) -> String {
+    pub fn name_or_default(&self) -> String {
         self.0
             .borrow()
             .name
@@ -70,11 +70,11 @@ impl StdVar {
             .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
     }
 
-    pub fn get_shift(&self) -> f64 {
+    pub fn shift(&self) -> f64 {
         self.0.borrow().shift
     }
 
-    pub fn get_upper_bound(&self) -> f64 {
+    pub fn upper_bound(&self) -> f64 {
         self.0.borrow().upper_bound
     }
 
@@ -99,9 +99,9 @@ impl Hash for StdVar {
 
 impl fmt::Display for StdVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name_display = match self.get_name() {
+        let name_display = match self.name() {
             Some(name) => name.clone(),
-            None => self.get_name_or_default(),
+            None => self.name_or_default(),
         };
 
         let sign = if self.is_negative_part() {

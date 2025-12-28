@@ -18,20 +18,20 @@ pub struct SlackDictionary {
 impl SlackDictionary {
     pub fn from_standard_model(standard_model: &StandardModel) -> Self {
         let variable_map = standard_model
-            .get_variables()
+            .variables()
             .iter()
             .map(|var| (var.clone(), DictVar::new_non_slack(var.clone())))
             .collect::<HashMap<_, _>>();
 
         let entries = standard_model
-            .get_constraints()
+            .constraints()
             .iter()
             .enumerate()
             .map(|(idx, constr)| {
                 DictEntryRef::new(
                     DictVar::new_slack(idx),
                     Self::transform_expression(
-                        &(constr.get_rhs() - constr.get_lhs()),
+                        &(constr.rhs() - constr.lhs()),
                         &variable_map,
                     ),
                 )
@@ -42,7 +42,7 @@ impl SlackDictionary {
             .iter()
             .flat_map(|entry| {
                 entry
-                    .get_non_basics()
+                    .non_basics()
                     .into_iter()
                     .map(move |non_basic_var| (non_basic_var, entry.clone()))
             })
@@ -52,9 +52,9 @@ impl SlackDictionary {
             });
 
         let objective = standard_model
-            .get_objective()
+            .objective()
             .as_ref()
-            .map(|obj| Self::transform_expression(obj.get_expr(), &variable_map))
+            .map(|obj| Self::transform_expression(obj.expr(), &variable_map))
             .unwrap();
 
         Self {
@@ -73,34 +73,34 @@ impl SlackDictionary {
         mem::replace(&mut self.objective, new_objective)
     }
 
-    pub fn get_objective(&self) -> &LinearExpr<DictVar> {
+    pub fn objective(&self) -> &LinearExpr<DictVar> {
         &self.objective
     }
 
-    pub fn get_entires(&self) -> &Vec<DictEntryRef> {
+    pub fn entries(&self) -> &Vec<DictEntryRef> {
         &self.entries
     }
 
-    pub fn get_variable_map(&self) -> &HashMap<StdVar, DictVar> {
+    pub fn variable_map(&self) -> &HashMap<StdVar, DictVar> {
         &self.variable_map
     }
 
-    pub fn get_objective_value(&self) -> f64 {
+    pub fn objective_value(&self) -> f64 {
         self.objective.constant
     }
 
-    pub fn get_basic_values(&self) -> HashMap<DictVar, f64> {
+    pub fn basic_values(&self) -> HashMap<DictVar, f64> {
         self.entries
             .iter()
-            .map(|entry| (entry.get_basic_var().clone(), entry.get_value()))
+            .map(|entry| (entry.basic_var().clone(), entry.value()))
             .collect()
     }
 
-    pub fn get_std_values(&self) -> HashMap<StdVar, f64> {
+    pub fn std_values(&self) -> HashMap<StdVar, f64> {
         let basic_to_entry = self
             .entries
             .iter()
-            .map(|entry| (entry.get_basic_var(), entry.clone()))
+            .map(|entry| (entry.basic_var(), entry.clone()))
             .collect::<HashMap<_, _>>();
 
         self.variable_map
@@ -110,7 +110,7 @@ impl SlackDictionary {
                     std_var.clone(),
                     basic_to_entry
                         .get(dict_var)
-                        .map(DictEntryRef::get_value)
+                        .map(DictEntryRef::value)
                         .unwrap_or(0.0),
                 )
             })
@@ -136,7 +136,7 @@ impl SlackDictionary {
 
     pub fn pivot(&mut self, entering: &DictVar, leaving: &DictEntryRef) {
         leaving.switch_to_basic(entering.clone());
-        let leaving_expr = leaving.get_expr();
+        let leaving_expr = leaving.expr();
 
         // Update entries that contain entering variable
         self.non_basic_entries
