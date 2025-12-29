@@ -25,7 +25,9 @@ pub struct SimplexSolver {
 
 impl SimplexSolver {
     pub fn form_standard_model(standard_model: &StandardModel, config: SolverConfig) -> Result<Self, SolverError> {
-        if standard_model.objective().is_none() {
+        if standard_model.variables().is_empty() {
+            return Err(SolverError::NoVariables);
+        } else if standard_model.objective().is_none() {
             return Err(SolverError::ObjectiveMissing);
         }
 

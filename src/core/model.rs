@@ -7,9 +7,8 @@ use crate::{
         objective::{Objective, ObjectiveSense},
         variable::Var,
     },
-    simplex::{config::SolverConfig, solution::SolverSolution},
-    standardization::standard_model::StandardModel,
     error::SolverError,
+    simplex::{config::SolverConfig, solution::SolverSolution}, standardization::standard_model::StandardModel
 };
 
 use super::variable::VariableType;
@@ -68,6 +67,10 @@ impl Model {
     pub fn solve(&mut self) -> Result<(), SolverError> {
         if !self.is_lp() {
             return Err(SolverError::NonLinearNotSupported);
+        } else if self.variables.is_empty() {
+            return Err(SolverError::NoVariables);
+        } else if self.objective.is_none(){
+            return Err(SolverError::ObjectiveMissing);
         }
 
         let mut standardized_model =

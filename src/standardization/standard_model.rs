@@ -114,6 +114,12 @@ impl StandardModel {
     }
 
     pub fn solve(&mut self) -> Result<(), SolverError> {
+        if self.variables.is_empty() {
+            return Err(SolverError::NoVariables);
+        } else if self.objective.is_none(){
+            return Err(SolverError::ObjectiveMissing);
+        }
+
         let mut solver =
             SimplexSolver::form_standard_model(&self, self.config.clone().unwrap_or_default())?;
         self.solution = solver.start();

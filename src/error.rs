@@ -7,4 +7,7 @@ pub enum SolverError {
 
     #[error("Objective function must be set before solving.")]
     ObjectiveMissing,
+
+    #[error("Model has no variables")]
+    NoVariables,
 }
