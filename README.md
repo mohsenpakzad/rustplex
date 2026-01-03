@@ -1,5 +1,9 @@
 # Linear Programming Solver in Rust
 
+[![Crates.io Version](https://img.shields.io/crates/v/rustplex.svg)](https://crates.io/crates/rustplex)
+[![Crates.io Page](https://img.shields.io/badge/crates.io-rustplex-orange)](https://crates.io/crates/rustplex)
+[![Downloads](https://img.shields.io/crates/d/rustplex.svg)](https://crates.io/crates/rustplex)
+
 Welcome to the **Rustplex**, a robust and efficient simplex solver implemented in Rust. This project provides tools to solve linear programming (LP) problems using the simplex method while supporting standardization, slack dictionaries, and auxiliary phases to handle infeasible and unbounded cases.
 
 ---
@@ -31,6 +35,16 @@ Welcome to the **Rustplex**, a robust and efficient simplex solver implemented i
   - Reports solver status (optimal, infeasible, unbounded, or iteration limit reached).
 
 ---
+
+## Roadmap / TODO
+
+Planned features and improvements for future releases:
+
+- [ ] **Comprehensive Documentation**: Add detailed API references, architectural explanations, and practical examples to improve usability and understanding.
+
+- [ ] **Multi-thread Architecture**: Implement parallel processing for faster solving of large-scale problems.
+
+- [ ] **Integer & Mixed-Integer Programming (MIP)**: Add branch-and-bound support for integer and mixed-integer variables.
 
 ## Usage
 
