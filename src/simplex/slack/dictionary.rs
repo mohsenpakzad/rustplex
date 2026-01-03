@@ -114,6 +114,10 @@ impl SlackDictionary {
         }
     }
 
+    pub fn remove_entry_at(&mut self, index: usize) {
+        self.entries.remove(index);
+    }
+
     pub fn pivot(&mut self, entering: &DictVar, leaving: &DictEntryRef) {
         leaving.switch_to_basic(entering.clone());
         let leaving_expr = leaving.expr();

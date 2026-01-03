@@ -89,8 +89,39 @@ impl SimplexSolver {
         aux_var: DictVar,
         mut original_objective: LinearExpr<DictVar>,
     ) {
+        // 1. Check if the Auxiliary variable is still in the Basis
+        // We look for an entry where the basic variable is 'Aux'
+        let aux_entry_index = self.slack_dict.entries().iter().position(|entry| {
+            entry.basic_var() == aux_var
+        });
+
+        if let Some(idx) = aux_entry_index {
+            let entry = self.slack_dict.entries()[idx].clone();
+            
+            // Try to find a non-basic variable in this row with a non-zero coefficient
+            // to pivot with.
+            let pivot_candidate = entry
+                .expr()
+                .terms
+                .iter()
+                .find(|&(_, &coeff)| coeff.abs() > *self.config.tolerance())
+                .map(|(var, _)| var.clone());
+
+            if let Some(entering) = pivot_candidate {
+                // Case A: Aux is basic, but we can pivot it out.
+                // We pivot 'entering' INTO basis, and 'Aux' (entry) OUT of basis.
+                self.slack_dict.pivot(&entering, &entry);
+            } else {
+                // Case B: Aux is basic, and implies 0 = 0 (redundant constraint).
+                // All coefficients are zero. We can safely delete this row.
+                self.slack_dict.remove_entry_at(idx);
+            }
+        }
+
+        // 2. Now it is safe to remove Aux (it is guaranteed to be non-basic or gone)
         self.slack_dict.remove_var_from_all_entries(aux_var);
 
+        // 3. Restore original objective
         self.slack_dict.entries().iter().for_each(|entry| {
             original_objective.replace_var_with_expr(entry.basic_var(), &entry.expr());
         });
