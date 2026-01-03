@@ -4,7 +4,7 @@
 [![Crates.io Page](https://img.shields.io/badge/crates.io-rustplex-orange)](https://crates.io/crates/rustplex)
 [![Downloads](https://img.shields.io/crates/d/rustplex.svg)](https://crates.io/crates/rustplex)
 
-Welcome to the **Rustplex**, a robust and efficient simplex solver implemented in Rust. This project provides tools to solve linear programming (LP) problems using the simplex method while supporting standardization, slack dictionaries, and auxiliary phases to handle infeasible and unbounded cases.
+A fast and efficient **Linear Programming (LP) Solver** implemented in Rust, designed to solve optimization problems using the **Simplex Algorithm**.
 
 ---
 
