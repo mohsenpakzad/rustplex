@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use crate::{
     core::{
@@ -6,9 +6,9 @@ use crate::{
         expression::LinearExpr,
         objective::{Objective, ObjectiveSense},
         variable::Var,
-    },
-    error::SolverError,
-    simplex::{config::SolverConfig, solution::SolverSolution}, standardization::standard_model::StandardModel
+    }, error::SolverError,
+    simplex::{config::SolverConfig, solution::SolverSolution, status::SolverStatus},
+    standardization::standard_model::StandardModel
 };
 
 use super::variable::VariableType;
@@ -73,11 +73,53 @@ impl Model {
             return Err(SolverError::ObjectiveMissing);
         }
 
-        let mut standardized_model =
-            StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
+        let mut standardized_model = StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
+
         standardized_model.solve()?;
-        self.solution = standardized_model.calculate_model_solution().unwrap();
+
+        self.solution = self.construct_solution_from_standard_model(&standardized_model);
+
         Ok(())
+    }
+
+    /// Internal helper to translate the standardized solution back to the user model context.
+    /// Handles variable mapping and objective sign correction.
+    fn construct_solution_from_standard_model(&self, std_model: &StandardModel) -> SolverSolution<Var> {
+        let std_solution = std_model.solution();
+
+        if matches!(std_solution.status(), SolverStatus::Infeasible) {
+            return SolverSolution::new_infeasible(
+                *std_solution.iterations(),
+                *std_solution.solve_time(),
+            );
+        }
+
+        // 1. Map values back to original variables
+        // We iterate over the original variables in the model and query the standard model for their values.
+        let variable_values: HashMap<Var, f64> = self
+            .variables
+            .iter()
+            .map(|var| (var.clone(), std_model.get_variable_value(var).unwrap())) // Added unwrap_or(0.0)
+            .collect();
+
+        // 2. Handle Objective Value and Sign
+        // If the objective was Minimize, we must negate the result (since Simplex solved for Max -Z)
+        let mut objective_value = std_solution.objective_value().unwrap();
+        
+        if let Some(obj) = &self.objective {
+            if matches!(obj.sense(), ObjectiveSense::Minimize) {
+                objective_value = -objective_value;
+            }
+        }
+
+        // 3. Construct the new solution object
+        SolverSolution::new(
+            std_solution.status().clone(),
+            objective_value,
+            variable_values,
+            *std_solution.iterations(),
+            *std_solution.solve_time(),
+        )
     }
 
     pub fn variables(&self) -> &Vec<Var> {

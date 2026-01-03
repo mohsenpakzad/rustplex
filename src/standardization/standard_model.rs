@@ -142,36 +142,30 @@ impl StandardModel {
         &self.solution
     }
 
-    pub fn calculate_model_solution(&self) -> Option<SolverSolution<Var>> {
+    /// Helper to look up the value of an original variable from the standardized solution.
+    pub fn get_variable_value(&self, var: &Var) -> Option<f64> {
         let variable_map = self.variable_map.as_ref()?;
+        let solution_values = self.solution.variable_values().as_ref()?;
+        let std_var = variable_map.get(var)?;
 
-        let solution_values = self.solution.variable_values();
-        if solution_values.is_none() {
-            return Some(self.solution.clone_with_new_variable_type(None));
-        }
-        let solution_values = solution_values.as_ref().unwrap();
-
-        let mapped_values = variable_map
-            .iter()
-            .map(|(var, std_var)| {
-                let value = match std_var {
-                    (Some(pos), Some(neg)) => {
-                        let pos_value = solution_values.get(pos).unwrap() + pos.shift();
-                        let neg_value = solution_values.get(neg).unwrap() + neg.shift();
-                        pos_value - neg_value
-                    }
-                    (Some(pos), None) => solution_values.get(pos).unwrap() + pos.shift(),
-                    (None, Some(neg)) => -solution_values.get(neg).unwrap() + neg.shift(),
-                    _ => 0.0,
-                };
-                (var.clone(), value)
-            })
-            .collect();
-
-        Some(
-            self.solution
-                .clone_with_new_variable_type(Some(mapped_values)),
-        )
+        Some(match std_var {
+            // Case: Split variable (x = x_pos - x_neg)
+            (Some(pos), Some(neg)) => {
+                let pos_value = solution_values.get(pos).unwrap() + pos.shift();
+                let neg_value = solution_values.get(neg).unwrap() + neg.shift();
+                pos_value - neg_value
+            }
+            // Case: Positive only (x = x_pos + shift)
+            (Some(pos), None) => {
+                solution_values.get(pos).unwrap() + pos.shift()
+            }
+            // Case: Negative only (x = -x_neg + shift)
+            (None, Some(neg)) => {
+                -solution_values.get(neg).unwrap() + neg.shift()
+            }
+            // Case: Variable optimized out or not found
+            _ => 0.0,
+        })
     }
 
     /// Standardize a variable into standard form (non-negative variables)
