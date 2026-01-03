@@ -40,16 +40,6 @@ impl DictEntryRef {
         self.0.borrow_mut().non_basics_expr.remove_term(&var)
     }
 
-    pub fn non_basics(&self) -> Vec<DictVar> {
-        self.0
-            .borrow()
-            .non_basics_expr
-            .terms
-            .keys()
-            .map(DictVar::clone)
-            .collect()
-    }
-
     /// Retrieves the coefficient of a non-basic variable from the non-basic expression.
     pub fn non_basic_coefficient(&self, var: &DictVar) -> f64 {
         self.0.borrow().non_basics_expr.coefficient(var)
