@@ -2,8 +2,8 @@ use std::{cmp, time::Instant};
 
 use crate::{
     core::expression::LinearExpr,
-    standardization::{standard_model::StandardModel, standard_variable::StdVar},
     error::SolverError,
+    standardization::{standard_model::StandardModel, standard_variable::StdVar},
 };
 
 use super::{
@@ -24,7 +24,10 @@ pub struct SimplexSolver {
 }
 
 impl SimplexSolver {
-    pub fn form_standard_model(standard_model: &StandardModel, config: SolverConfig) -> Result<Self, SolverError> {
+    pub fn form_standard_model(
+        standard_model: &StandardModel,
+        config: SolverConfig,
+    ) -> Result<Self, SolverError> {
         if standard_model.variables().is_empty() {
             return Err(SolverError::NoVariables);
         } else if standard_model.objective().is_none() {
@@ -84,20 +87,18 @@ impl SimplexSolver {
         (aux_var, original_objective)
     }
 
-    fn prepare_phase_two(
-        &mut self,
-        aux_var: DictVar,
-        mut original_objective: LinearExpr<DictVar>,
-    ) {
+    fn prepare_phase_two(&mut self, aux_var: DictVar, mut original_objective: LinearExpr<DictVar>) {
         // 1. Check if the Auxiliary variable is still in the Basis
         // We look for an entry where the basic variable is 'Aux'
-        let aux_entry_index = self.slack_dict.entries().iter().position(|entry| {
-            entry.basic_var() == aux_var
-        });
+        let aux_entry_index = self
+            .slack_dict
+            .entries()
+            .iter()
+            .position(|entry| entry.basic_var() == aux_var);
 
         if let Some(idx) = aux_entry_index {
             let entry = self.slack_dict.entries()[idx].clone();
-            
+
             // Try to find a non-basic variable in this row with a non-zero coefficient
             // to pivot with.
             let pivot_candidate = entry

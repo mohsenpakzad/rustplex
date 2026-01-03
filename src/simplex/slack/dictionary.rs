@@ -29,10 +29,7 @@ impl SlackDictionary {
             .map(|(idx, constr)| {
                 DictEntryRef::new(
                     DictVar::new_slack(idx),
-                    Self::transform_expression(
-                        &(constr.rhs() - constr.lhs()),
-                        &variable_map,
-                    ),
+                    Self::transform_expression(&(constr.rhs() - constr.lhs()), &variable_map),
                 )
             })
             .collect::<Vec<_>>();
@@ -126,7 +123,7 @@ impl SlackDictionary {
         // If an entry contains the 'entering' variable, the method below will swap it.
         // If it doesn't contain it, the method returns None and does nothing.
         for entry in self.entries.iter() {
-            // We don't need to substitute in the pivot row itself 
+            // We don't need to substitute in the pivot row itself
             // (variable was already removed by switch_to_basic), but explicitly skipping it is cleaner.
             // We compare basic variables to identify if it's the same row.
             if entry.basic_var() != leaving.basic_var() {
@@ -135,7 +132,8 @@ impl SlackDictionary {
         }
 
         // Update objective
-        self.objective.replace_var_with_expr(entering.clone(), &leaving_expr);
+        self.objective
+            .replace_var_with_expr(entering.clone(), &leaving_expr);
     }
 
     fn transform_expression(

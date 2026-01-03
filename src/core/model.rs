@@ -6,9 +6,10 @@ use crate::{
         expression::LinearExpr,
         objective::{Objective, ObjectiveSense},
         variable::Var,
-    }, error::SolverError,
+    },
+    error::SolverError,
     simplex::{config::SolverConfig, solution::SolverSolution, status::SolverStatus},
-    standardization::standard_model::StandardModel
+    standardization::standard_model::StandardModel,
 };
 
 use super::variable::VariableType;
@@ -69,11 +70,12 @@ impl Model {
             return Err(SolverError::NonLinearNotSupported);
         } else if self.variables.is_empty() {
             return Err(SolverError::NoVariables);
-        } else if self.objective.is_none(){
+        } else if self.objective.is_none() {
             return Err(SolverError::ObjectiveMissing);
         }
 
-        let mut standardized_model = StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
+        let mut standardized_model =
+            StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
 
         standardized_model.solve()?;
 
@@ -84,7 +86,10 @@ impl Model {
 
     /// Internal helper to translate the standardized solution back to the user model context.
     /// Handles variable mapping and objective sign correction.
-    fn construct_solution_from_standard_model(&self, std_model: &StandardModel) -> SolverSolution<Var> {
+    fn construct_solution_from_standard_model(
+        &self,
+        std_model: &StandardModel,
+    ) -> SolverSolution<Var> {
         let std_solution = std_model.solution();
 
         if matches!(std_solution.status(), SolverStatus::Infeasible) {
@@ -105,7 +110,7 @@ impl Model {
         // 2. Handle Objective Value and Sign
         // If the objective was Minimize, we must negate the result (since Simplex solved for Max -Z)
         let mut objective_value = std_solution.objective_value().unwrap();
-        
+
         if let Some(obj) = &self.objective {
             if matches!(obj.sense(), ObjectiveSense::Minimize) {
                 objective_value = -objective_value;

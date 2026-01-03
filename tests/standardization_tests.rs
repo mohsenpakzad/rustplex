@@ -1,10 +1,7 @@
 mod common;
 
-use rustplex::{
-    standardization::standard_model::StandardModel,
-    SolverStatus,
-};
 use common::assert_approx_eq;
+use rustplex::{standardization::standard_model::StandardModel, SolverStatus};
 
 /// Test 1: Basic Standard Form Problem
 ///
@@ -45,7 +42,7 @@ fn test_standard_model_optimal() {
 
     // 4. Solve
     assert!(std_model.solve().is_ok());
-    
+
     let solution = std_model.solution();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 17.0);
@@ -76,7 +73,7 @@ fn test_standard_model_infeasible() {
     std_model.add_constraint(1.0 * &x, -5.0);
 
     assert!(std_model.solve().is_ok());
-    
+
     let solution = std_model.solution();
     assert!(matches!(solution.status(), SolverStatus::Infeasible));
     assert!(solution.objective_value().is_none());
@@ -108,7 +105,7 @@ fn test_standard_model_unbounded() {
     std_model.add_constraint(-1.0 * &x, 5.0);
 
     assert!(std_model.solve().is_ok());
-    
+
     let solution = std_model.solution();
     assert!(matches!(solution.status(), SolverStatus::Unbounded));
 }
@@ -120,13 +117,13 @@ fn test_standard_model_unbounded() {
 ///
 /// maximize z: -x;
 ///
-/// subject to c1: -x <= -10; 
+/// subject to c1: -x <= -10;
 ///
 /// Solution Description:
 /// -x <= -10 multiply by -1 => x >= 10.
-/// This looks simple, but in the Simplex Dictionary (Standard Form), 
+/// This looks simple, but in the Simplex Dictionary (Standard Form),
 /// RHS must generally be non-negative for a feasible starting basis.
-/// Here RHS is -10. This forces the solver to enter Phase 1 
+/// Here RHS is -10. This forces the solver to enter Phase 1
 /// to find a valid starting dictionary.
 /// Optimal solution: Smallest x >= 10 is x=10.
 /// Maximize -x => -10.
@@ -143,7 +140,7 @@ fn test_standard_model_needs_phase_1() {
     std_model.add_constraint(-1.0 * &x, -10.0);
 
     assert!(std_model.solve().is_ok());
-    
+
     let solution = std_model.solution();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), -10.0);

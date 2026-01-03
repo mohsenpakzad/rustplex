@@ -1,17 +1,14 @@
-use rustplex::{
-    core::expression::LinearExpr,
-    Var,
-};
+use rustplex::{core::expression::LinearExpr, Var};
 
 /// Test: Term Aggregation
 /// Logic: 1.0*x + 2.0*x should become 3.0*x
 #[test]
 fn test_add_same_variable() {
     let x = Var::new().with_name("x");
-    
+
     // x + 2x
     let expr: LinearExpr<Var> = LinearExpr::from(&x) + (LinearExpr::from(&x) * 2.0);
-    
+
     assert_eq!(expr.coefficient(&x), 3.0);
     assert_eq!(expr.terms.len(), 1); // Should merge into one term
 }
@@ -21,9 +18,9 @@ fn test_add_same_variable() {
 #[test]
 fn test_term_cancellation() {
     let x = Var::new().with_name("x");
-    
+
     let expr: LinearExpr<Var> = (LinearExpr::from(&x) * 3.0) - (LinearExpr::from(&x) * 3.0);
-    
+
     // Depending on implementation details, it might be 0.0 or removed.
     // Checking coefficient is safer.
     assert_eq!(expr.coefficient(&x), 0.0);
@@ -36,14 +33,14 @@ fn test_term_cancellation() {
 fn test_constant_math() {
     let x = Var::new().with_name("x");
     let y = Var::new().with_name("y");
-    
+
     // (x + 5)
     let expr1 = LinearExpr::from(&x) + 5.0;
     // (y - 2)
     let expr2 = LinearExpr::from(&y) - 2.0;
-    
+
     let sum: LinearExpr<Var> = expr1 + expr2;
-    
+
     assert_eq!(sum.coefficient(&x), 1.0);
     assert_eq!(sum.coefficient(&y), 1.0);
     assert_eq!(sum.constant, 3.0); // 5 - 2 = 3
@@ -54,10 +51,10 @@ fn test_constant_math() {
 #[test]
 fn test_distributive_property() {
     let x = Var::new().with_name("x");
-    
+
     let expr = LinearExpr::from(&x) * 3.0 + 4.0;
     let scaled: LinearExpr<Var> = expr * 2.0;
-    
+
     assert_eq!(scaled.coefficient(&x), 6.0);
     assert_eq!(scaled.constant, 8.0);
 }

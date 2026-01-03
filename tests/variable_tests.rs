@@ -32,10 +32,10 @@ fn test_variable_hashing() {
 
     let mut set = HashSet::new();
     set.insert(x1.clone());
-    
+
     // x1_clone should already be in the set
     assert!(set.contains(&x1_clone));
-    
+
     // x2 should NOT be in the set
     assert!(!set.contains(&x2));
 }
@@ -46,10 +46,10 @@ fn test_variable_hashing() {
 fn test_interior_mutability() {
     let x = Var::new();
     let x_clone = x.clone();
-    
+
     // Modify 'x'
     x.with_lower_bound(10.0);
-    
+
     // 'x_clone' should reflect this change because they share the same RefCell
     assert_eq!(x_clone.lower_bound(), 10.0);
 }

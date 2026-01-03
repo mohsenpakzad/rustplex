@@ -8,8 +8,8 @@ use crate::{
         objective::Objective,
         variable::{Var, VariableType},
     },
-    simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
     error::SolverError,
+    simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
 };
 
 use super::{
@@ -116,7 +116,7 @@ impl StandardModel {
     pub fn solve(&mut self) -> Result<(), SolverError> {
         if self.variables.is_empty() {
             return Err(SolverError::NoVariables);
-        } else if self.objective.is_none(){
+        } else if self.objective.is_none() {
             return Err(SolverError::ObjectiveMissing);
         }
 
@@ -156,13 +156,9 @@ impl StandardModel {
                 pos_value - neg_value
             }
             // Case: Positive only (x = x_pos + shift)
-            (Some(pos), None) => {
-                solution_values.get(pos).unwrap() + pos.shift()
-            }
+            (Some(pos), None) => solution_values.get(pos).unwrap() + pos.shift(),
             // Case: Negative only (x = -x_neg + shift)
-            (None, Some(neg)) => {
-                -solution_values.get(neg).unwrap() + neg.shift()
-            }
+            (None, Some(neg)) => -solution_values.get(neg).unwrap() + neg.shift(),
             // Case: Variable optimized out or not found
             _ => 0.0,
         })
@@ -175,7 +171,11 @@ impl StandardModel {
         match var.var_type() {
             VariableType::Binary => (
                 // Binary variables are converted to a non-negative variable with upper bound of 1
-                Some(StdVar::new_positive().with_name(std_var_name).with_upper_bound(1.0)),
+                Some(
+                    StdVar::new_positive()
+                        .with_name(std_var_name)
+                        .with_upper_bound(1.0),
+                ),
                 None,
             ),
             VariableType::Integer | VariableType::Continuous => {
@@ -185,13 +185,21 @@ impl StandardModel {
                 match (lb, ub) {
                     // Case 1: Lower bound is 0, create non-negative variable with optional upper bound
                     (0.0, _) => (
-                        Some(StdVar::new_positive().with_name(std_var_name).with_upper_bound(ub)),
+                        Some(
+                            StdVar::new_positive()
+                                .with_name(std_var_name)
+                                .with_upper_bound(ub),
+                        ),
                         None,
                     ),
                     // Case 2: Upper bound is 0, create non-positive variable
                     (_, 0.0) => (
                         None,
-                        Some(StdVar::new_negative().with_name(std_var_name).with_upper_bound(-lb)),
+                        Some(
+                            StdVar::new_negative()
+                                .with_name(std_var_name)
+                                .with_upper_bound(-lb),
+                        ),
                     ),
                     // Case 3: Unbounded variable, split into positive and negative parts
                     (f64::NEG_INFINITY, f64::INFINITY) => (
@@ -201,11 +209,19 @@ impl StandardModel {
                     // Case 4: Lower bound is negative infinity, create shifted negative variable
                     (f64::NEG_INFINITY, _) => (
                         None,
-                        Some(StdVar::new_negative().with_name(std_var_name).with_shift(ub)),
+                        Some(
+                            StdVar::new_negative()
+                                .with_name(std_var_name)
+                                .with_shift(ub),
+                        ),
                     ),
                     // Case 5: Upper bound is infinity, create shifted positive variable
                     (_, f64::INFINITY) => (
-                        Some(StdVar::new_positive().with_name(std_var_name).with_shift(lb)),
+                        Some(
+                            StdVar::new_positive()
+                                .with_name(std_var_name)
+                                .with_shift(lb),
+                        ),
                         None,
                     ),
                     // Case 6: Bounded variable within finite range, create shifted positive variable
