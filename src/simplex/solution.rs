@@ -38,29 +38,24 @@ impl<V> SolverSolution<V> {
         }
     }
 
-    pub fn clone_with_new_variable_type<U>(
-        &self,
-        variable_values: Option<HashMap<U, f64>>,
-    ) -> SolverSolution<U> {
-        SolverSolution {
-            status: self.status.clone(),
-            objective_value: self.objective_value,
-            variable_values,
-            iterations: self.iterations,
-            solve_time: self.solve_time,
-        }
-    }
-
-    pub fn get_status(&self) -> &SolverStatus {
+    pub fn status(&self) -> &SolverStatus {
         &self.status
     }
 
-    pub fn get_objective_value(&self) -> &Option<f64> {
+    pub fn objective_value(&self) -> &Option<f64> {
         &self.objective_value
     }
 
-    pub fn get_variable_values(&self) -> &Option<HashMap<V, f64>> {
+    pub fn variable_values(&self) -> &Option<HashMap<V, f64>> {
         &self.variable_values
+    }
+
+    pub fn iterations(&self) -> &u32 {
+        &self.iterations
+    }
+
+    pub fn solve_time(&self) -> &std::time::Duration {
+        &self.solve_time
     }
 }
 

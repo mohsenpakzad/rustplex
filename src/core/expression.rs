@@ -45,7 +45,7 @@ impl<T: ExprVariable> LinearExpr<T> {
         Self { terms, constant }
     }
 
-    pub fn get_coefficient(&self, var: &T) -> f64 {
+    pub fn coefficient(&self, var: &T) -> f64 {
         *self.terms.get(var).unwrap_or(&0.0)
     }
 
