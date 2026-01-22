@@ -29,11 +29,6 @@ impl DictEntryRef {
             .add_term(var, coefficient);
     }
 
-    /// Checks if a given variable is present in the non-basic expression.
-    pub fn contains_non_basic(&self, var: &DictVar) -> bool {
-        self.0.borrow().non_basics_expr.terms.contains_key(var)
-    }
-
     /// Removes a non-basic variable from the expression and
     /// returns its coefficient if it existed.
     pub fn remove_non_basic(&self, var: DictVar) -> Option<f64> {

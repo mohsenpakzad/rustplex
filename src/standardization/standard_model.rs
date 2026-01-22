@@ -282,32 +282,33 @@ impl StandardModel {
         expression: &LinearExpr<Var>,
         variable_map: &VariableMap,
     ) -> LinearExpr<StdVar> {
-        let mut std_terms = HashMap::new();
+        let mut new_expr = LinearExpr::new();
         let mut shift = 0.0;
 
-        for (var, &coefficient) in &expression.terms {
+        for (var, coefficient) in &expression.terms {
             match variable_map.get(var).unwrap() {
                 (Some(pos_var), Some(neg_var)) => {
                     shift += coefficient * pos_var.shift() + coefficient * neg_var.shift();
 
-                    std_terms.insert(pos_var.clone(), coefficient);
-                    std_terms.insert(neg_var.clone(), -coefficient);
+                    new_expr.add_term(pos_var.clone(), *coefficient);
+                    new_expr.add_term(neg_var.clone(), -coefficient);
                 }
                 (Some(pos_var), None) => {
                     shift += coefficient * pos_var.shift();
 
-                    std_terms.insert(pos_var.clone(), coefficient);
+                    new_expr.add_term(pos_var.clone(), *coefficient);
                 }
                 (None, Some(neg_var)) => {
                     shift += coefficient * neg_var.shift();
 
-                    std_terms.insert(neg_var.clone(), -coefficient);
+                    new_expr.add_term(neg_var.clone(), -coefficient);
                 }
                 _ => {} // Ignore if no variable exists
             }
         }
 
-        LinearExpr::with_terms_and_constant(std_terms, expression.constant + shift)
+        new_expr.add_constant(expression.constant + shift);
+        new_expr
     }
 }
 

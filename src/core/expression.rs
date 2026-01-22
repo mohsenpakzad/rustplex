@@ -1,33 +1,31 @@
-use std::collections::HashMap;
 use std::fmt;
-use std::hash::Hash;
 
 #[derive(Debug, Clone)]
 pub struct LinearExpr<T: ExprVariable> {
-    pub terms: HashMap<T, f64>,
+    pub terms: Vec<(T, f64)>,
     pub constant: f64,
 }
 
-pub trait ExprVariable: Clone + Hash + Eq + fmt::Display {}
+pub trait ExprVariable: Clone + Eq + fmt::Display {}
 
 impl<T: ExprVariable> LinearExpr<T> {
     pub fn new() -> Self {
         Self {
-            terms: HashMap::new(),
+            terms: Vec::new(),
             constant: 0.0,
         }
     }
 
     pub fn with_term(var: T, coefficient: f64) -> Self {
-        let mut terms = HashMap::new();
-        terms.insert(var, coefficient);
+        let mut terms = Vec::with_capacity(1);
+        terms.push((var, coefficient));
         Self {
             terms,
             constant: 0.0,
         }
     }
 
-    pub fn with_terms(terms: HashMap<T, f64>) -> Self {
+    pub fn with_terms(terms: Vec<(T, f64)>) -> Self {
         Self {
             terms,
             constant: 0.0,
@@ -36,30 +34,43 @@ impl<T: ExprVariable> LinearExpr<T> {
 
     pub fn with_constant(constant: f64) -> Self {
         Self {
-            terms: HashMap::new(),
+            terms: Vec::new(),
             constant,
         }
     }
 
-    pub fn with_terms_and_constant(terms: HashMap<T, f64>, constant: f64) -> Self {
+    pub fn with_terms_and_constant(terms: Vec<(T, f64)>, constant: f64) -> Self {
         Self { terms, constant }
     }
 
     pub fn coefficient(&self, var: &T) -> f64 {
-        *self.terms.get(var).unwrap_or(&0.0)
+        self.terms
+            .iter()
+            .find(|(v, _)| v == var)
+            .map(|(_, c)| *c)
+            .unwrap_or(0.0)
     }
 
     pub fn add_term(&mut self, var: T, coefficient: f64) {
-        *self.terms.entry(var).or_insert(0.0) += coefficient;
+        if let Some((_, c)) = self.terms.iter_mut().find(|(v, _)| *v == var) {
+            *c += coefficient;
+        } else {
+            self.terms.push((var, coefficient));
+        }
     }
 
     pub fn remove_term(&mut self, var: &T) -> Option<f64> {
-        self.terms.remove(var)
+        if let Some(idx) = self.terms.iter().position(|(v, _)| v == var) {
+            let (_, coeff) = self.terms.swap_remove(idx);
+            Some(coeff)
+        } else {
+            None
+        }
     }
 
     pub fn add_expr(&mut self, other: &Self) {
-        for (var, &coefficient) in &other.terms {
-            self.add_term(var.clone(), coefficient);
+        for (var, coefficient) in &other.terms {
+            self.add_term(var.clone(), *coefficient);
         }
         self.constant += other.constant;
     }
@@ -92,7 +103,7 @@ impl<T: ExprVariable> LinearExpr<T> {
     }
 
     pub fn scale(&mut self, scalar: f64) {
-        for coefficient in self.terms.values_mut() {
+        for (_, coefficient) in self.terms.iter_mut() {
             *coefficient *= scalar;
         }
         self.constant *= scalar;
@@ -105,7 +116,9 @@ macro_rules! impl_expr_display {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 let mut first = true;
 
-                for (var, &coefficient) in &self.terms {
+                for (var, coefficient) in &self.terms {
+                    let coefficient = *coefficient;
+
                     // Skip zero coefficients
                     if coefficient == 0.0 {
                         continue;
@@ -179,691 +192,369 @@ macro_rules! impl_expr_display {
     };
 }
 
-// ------------------- LinearExpr ops --------------------
-// 1. LinearExpr + LinearExpr
-// 2. LinearExpr - LinearExpr
-// 3. -LinearExpr
-// ------------------ ExprVariable ops -------------------
-// 4. From<ExprVariable> for LinearExpr
-// 5. -ExprVariable
-// 6. ExprVariable + ExprVariable
-// 7. ExprVariable - ExprVariable
-// -------- Mixed ExprVariable and LinearExpr ops --------
-// 8. ExprVariable + LinearExpr
-// 9. ExprVariable - LinearExpr
-// 10. LinearExpr + ExprVariable
-// 11. LinearExpr - ExprVariable
-// -------------- Numeric on LinearExpr ops --------------
-// 12. From<numeric> for LinearExpr
-// 13. LinearExpr + numeric
-// 14. numeric + LinearExpr
-// 15. LinearExpr - numeric
-// 16. numeric - LinearExpr
-// 17. LinearExpr * numeric
-// 18. numeric * LinearExpr
-// 19. LinearExpr / numeric
-// ------------- Numeric on ExprVariable ops -------------
-// 20. ExprVariable + numeric
-// 21. numeric + ExprVariable
-// 22. ExprVariable - numeric
-// 23. numeric - ExprVariable
-// 24. ExprVariable * numeric
-// 25. numeric * ExprVariable
-// 26. ExprVariable / numeric
-
+// ============================================================
+//  CORE LOGIC: LinearExpr Operations
+// ============================================================
+// --- Add ---
+// --- Sub ---
+// --- Neg ---
+// ============================================================
+//  INTERACTION: ExprVariable <-> LinearExpr
+// ============================================================
+// --- Expr From Variable ---
+// --- Neg Variable ---
+// --- Var + Var ---
+// --- Var - Var ---
+// --- Var + Expr ---
+// --- Expr + Var ---
+// --- Var - Expr ---
+// --- Expr - Var ---
+// ============================================================
+//  NUMERIC OPERATIONS
+// ============================================================
+// --- Expr From Numeric ---
+// --- Expr + Num ---
+// --- Num + Expr ---
+// --- Expr - Num ---
+// --- Num - Expr ---
+// --- Expr * Num ---
+// --- Num * Expr ---
+// --- Expr / Num ---
+// --- Var + Num ---
+// --- Num + Var ---
+// --- Var - Num ---
+// --- Num - Var ---
+// --- Var * Num ---
+// --- Num * Var ---
+// --- Var / Num ---
 macro_rules! impl_expr_ops {
     ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
-        use std::collections::HashMap;
         use std::ops::{Add, Div, Mul, Neg, Sub};
         use crate::core::expression::LinearExpr;
 
-        // ==================== LinearExpr Operations ====================
+        // ============================================================
+        //  HELPER MACROS: Automatic Reference Forwarding
+        // ============================================================
 
-        // 1. LinearExpr + LinearExpr (owned and reference combinations)
-        impl Add for LinearExpr<$var_type> {
+        // Generates implementations for: &LHS + &RHS, &LHS + RHS, LHS + &RHS
+        // by forwarding them to the value-based implementation: LHS + RHS
+        macro_rules! forward_binop {
+            (impl $trait:ident, $fn:ident for $lhs:ty, $rhs:ty) => {
+                // &LHS op &RHS
+                impl<'a, 'b> $trait<&'b $rhs> for &'a $lhs {
+                    type Output = LinearExpr<$var_type>;
+                    fn $fn(self, other: &'b $rhs) -> Self::Output {
+                        self.clone().$fn(other.clone())
+                    }
+                }
+                // &LHS op RHS
+                impl<'a> $trait<$rhs> for &'a $lhs {
+                    type Output = LinearExpr<$var_type>;
+                    fn $fn(self, other: $rhs) -> Self::Output {
+                        self.clone().$fn(other)
+                    }
+                }
+                // LHS op &RHS
+                impl<'a> $trait<&'a $rhs> for $lhs {
+                    type Output = LinearExpr<$var_type>;
+                    fn $fn(self, other: &'a $rhs) -> Self::Output {
+                        self.$fn(other.clone())
+                    }
+                }
+            };
+        }
+
+        // Generates implementations for: -&val
+        // by forwarding to: -val
+        macro_rules! forward_unop {
+            (impl $trait:ident, $fn:ident for $target:ty) => {
+                impl<'a> $trait for &'a $target {
+                    type Output = LinearExpr<$var_type>;
+                    fn $fn(self) -> Self::Output {
+                        self.clone().$fn()
+                    }
+                }
+            };
+        }
+
+        // ============================================================
+        //  CORE LOGIC: LinearExpr Operations
+        // ============================================================
+
+        // --- Add ---
+        impl Add<LinearExpr<$var_type>> for LinearExpr<$var_type> {
             type Output = Self;
-
-            fn add(self, other: Self) -> Self {
-                let mut result = self.clone();
-                for (var, coefficient) in other.terms {
-                    *result.terms.entry(var).or_insert(0.0) += coefficient;
-                }
-                result.constant += other.constant;
-                result
+            fn add(mut self, other: Self) -> Self {
+                self.add_expr(&other);
+                self
             }
         }
+        forward_binop!(impl Add, add for LinearExpr<$var_type>, LinearExpr<$var_type>);
 
-        impl<'a> Add for &'a LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, other: Self) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                for (var, coefficient) in &other.terms {
-                    *result.terms.entry(var.clone()).or_insert(0.0) += coefficient;
-                }
-                result.constant += other.constant;
-                result
-            }
-        }
-
-        impl<'a> Add<&'a LinearExpr<$var_type>> for LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, other: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                for (var, coefficient) in &other.terms {
-                    *result.terms.entry(var.clone()).or_insert(0.0) += coefficient;
-                }
-                result.constant += other.constant;
-                result
-            }
-        }
-
-        // 2. LinearExpr - LinearExpr (owned and reference combinations)
-        impl Sub for LinearExpr<$var_type> {
+        // --- Sub ---
+        impl Sub<LinearExpr<$var_type>> for LinearExpr<$var_type> {
             type Output = Self;
-
-            fn sub(self, other: Self) -> Self {
-                let mut result = self.clone();
-                for (var, coefficient) in other.terms {
-                    *result.terms.entry(var).or_insert(0.0) -= coefficient;
-                }
-                result.constant -= other.constant;
-                result
+            fn sub(mut self, other: Self) -> Self {
+                self.sub_expr(&other);
+                self
             }
         }
+        forward_binop!(impl Sub, sub for LinearExpr<$var_type>, LinearExpr<$var_type>);
 
-        impl<'a> Sub for &'a LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, other: Self) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                for (var, coefficient) in &other.terms {
-                    *result.terms.entry(var.clone()).or_insert(0.0) -= coefficient;
-                }
-                result.constant -= other.constant;
-                result
-            }
-        }
-
-        impl<'a> Sub<&'a LinearExpr<$var_type>> for LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, other: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                for (var, coefficient) in &other.terms {
-                    *result.terms.entry(var.clone()).or_insert(0.0) -= coefficient;
-                }
-                result.constant -= other.constant;
-                result
-            }
-        }
-
-        // 3. -LinearExpr (owned and reference)
+        // --- Neg ---
         impl Neg for LinearExpr<$var_type> {
             type Output = Self;
-
-            fn neg(self) -> Self {
-                let mut result = self.clone();
-                for coefficient in result.terms.values_mut() {
-                    *coefficient = -*coefficient;
-                }
-                result.constant = -result.constant;
-                result
+            fn neg(mut self) -> Self {
+                self.scale(-1.0);
+                self
             }
         }
+        forward_unop!(impl Neg, neg for LinearExpr<$var_type>);
 
-        impl<'a> Neg for &'a LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
+        // ============================================================
+        //  INTERACTION: ExprVariable <-> LinearExpr
+        // ============================================================
 
-            fn neg(self) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                for coefficient in result.terms.values_mut() {
-                    *coefficient = -*coefficient;
-                }
-                result.constant = -result.constant;
-                result
-            }
-        }
-
-        // ==================== ExprVariable Operations ====================
-
-        // 4. From<ExprVariable> for LinearExpr (owned and reference)
+        // --- Expr From Variable ---
         impl From<$var_type> for LinearExpr<$var_type> {
             fn from(var: $var_type) -> Self {
-                let mut terms = HashMap::new();
-                terms.insert(var, 1.0);
-                LinearExpr::with_terms(terms)
+                LinearExpr::with_term(var, 1.0)
             }
         }
-
+        
+        // --- From &Variable ---
         impl<'a> From<&'a $var_type> for LinearExpr<$var_type> {
             fn from(var: &'a $var_type) -> Self {
-                let mut terms = HashMap::new();
-                terms.insert(var.clone(), 1.0);
-                LinearExpr::with_terms(terms)
+                LinearExpr::with_term(var.clone(), 1.0)
             }
         }
 
-        // 5. -ExprVariable (owned and reference)
+        // --- Neg Variable ---
         impl Neg for $var_type {
             type Output = LinearExpr<$var_type>;
-
-            fn neg(self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self, -1.0);
-                LinearExpr::with_terms(terms)
+            fn neg(self) -> Self::Output {
+                LinearExpr::with_term(self, -1.0)
             }
         }
+        forward_unop!(impl Neg, neg for $var_type);
 
-        impl<'a> Neg for &'a $var_type {
+        // --- Var + Var ---
+        impl Add<$var_type> for $var_type {
             type Output = LinearExpr<$var_type>;
-
-            fn neg(self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self.clone(), -1.0);
+            fn add(self, other: Self) -> Self::Output {
+                let mut terms = Vec::with_capacity(2);
+                terms.push((self, 1.0));
+                terms.push((other, 1.0));
                 LinearExpr::with_terms(terms)
             }
         }
+        forward_binop!(impl Add, add for $var_type, $var_type);
 
-        // 6. ExprVariable + ExprVariable (owned and reference combinations)
-        impl Add for $var_type {
+        // --- Var - Var ---
+        impl Sub<$var_type> for $var_type {
             type Output = LinearExpr<$var_type>;
-
-            fn add(self, other: Self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self, 1.0);
-                terms.insert(other, 1.0);
+            fn sub(self, other: Self) -> Self::Output {
+                let mut terms = Vec::with_capacity(2);
+                terms.push((self, 1.0));
+                terms.push((other, -1.0));
                 LinearExpr::with_terms(terms)
             }
         }
+        forward_binop!(impl Sub, sub for $var_type, $var_type);
 
-        impl<'a> Add for &'a $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, other: Self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self.clone(), 1.0);
-                terms.insert(other.clone(), 1.0);
-                LinearExpr::with_terms(terms)
-            }
-        }
-
-        impl<'a> Add<&'a $var_type> for $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, other: &'a Self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self, 1.0);
-                terms.insert(other.clone(), 1.0);
-                LinearExpr::with_terms(terms)
-            }
-        }
-
-        // 7. ExprVariable - ExprVariable (owned and reference combinations)
-        impl Sub for $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, other: Self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self, 1.0);
-                terms.insert(other, -1.0);
-                LinearExpr::with_terms(terms)
-            }
-        }
-
-        impl<'a> Sub for &'a $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, other: Self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self.clone(), 1.0);
-                terms.insert(other.clone(), -1.0);
-                LinearExpr::with_terms(terms)
-            }
-        }
-
-        impl<'a> Sub<&'a $var_type> for $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, other: &'a Self) -> LinearExpr<$var_type> {
-                let mut terms = HashMap::new();
-                terms.insert(self, 1.0);
-                terms.insert(other.clone(), -1.0);
-                LinearExpr::with_terms(terms)
-            }
-        }
-
-        // ==================== Mixed Operations ====================
-
-        // 8. ExprVariable + LinearExpr (owned and reference combinations)
+        // --- Var + Expr ---
         impl Add<LinearExpr<$var_type>> for $var_type {
             type Output = LinearExpr<$var_type>;
-
-            fn add(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = expr.clone();
-                result.add_term(self, 1.0);
-                result
+            fn add(self, mut expr: LinearExpr<$var_type>) -> Self::Output {
+                expr.add_term(self, 1.0);
+                expr
             }
         }
+        forward_binop!(impl Add, add for $var_type, LinearExpr<$var_type>);
 
-        impl<'a> Add<&'a LinearExpr<$var_type>> for $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = expr.clone();
-                result.add_term(self, 1.0);
-                result
+        // --- Expr + Var ---
+        impl Add<$var_type> for LinearExpr<$var_type> {
+            type Output = Self;
+            fn add(mut self, var: $var_type) -> Self {
+                self.add_term(var, 1.0);
+                self
             }
         }
+        forward_binop!(impl Add, add for LinearExpr<$var_type>, $var_type);
 
-        impl<'a> Add<LinearExpr<$var_type>> for &'a $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = expr.clone();
-                result.add_term(self.clone(), 1.0);
-                result
-            }
-        }
-
-        // 9. ExprVariable - LinearExpr (owned and reference combinations)
+        // --- Var - Expr ---
+        // Logic: Var - Expr  =>  Var + (-1 * Expr)
         impl Sub<LinearExpr<$var_type>> for $var_type {
             type Output = LinearExpr<$var_type>;
-
-            fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = -expr;
-                result.add_term(self, 1.0);
-                result
+            fn sub(self, mut expr: LinearExpr<$var_type>) -> Self::Output {
+                expr.scale(-1.0);
+                expr.add_term(self, 1.0);
+                expr
             }
         }
+        forward_binop!(impl Sub, sub for $var_type, LinearExpr<$var_type>);
 
-        impl<'a> Sub<&'a LinearExpr<$var_type>> for $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = -expr.clone();
-                result.add_term(self, 1.0);
-                result
-            }
-        }
-
-        impl<'a> Sub<LinearExpr<$var_type>> for &'a $var_type {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                let mut result = -expr;
-                result.add_term(self.clone(), 1.0);
-                result
-            }
-        }
-
-        // 10. LinearExpr + ExprVariable (owned and reference combinations)
-        impl Add<$var_type> for LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, var: $var_type) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                result.add_term(var, 1.0);
-                result
-            }
-        }
-
-        impl<'a> Add<&'a $var_type> for LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, var: &'a $var_type) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                result.add_term(var.clone(), 1.0);
-                result
-            }
-        }
-
-        impl<'a> Add<$var_type> for &LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn add(self, var: $var_type) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                result.add_term(var, 1.0);
-                result
-            }
-        }
-
-        // 11. LinearExpr - ExprVariable (owned and reference combinations)
+        // --- Expr - Var ---
         impl Sub<$var_type> for LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                result.add_term(var, -1.0);
-                result
+            type Output = Self;
+            fn sub(mut self, var: $var_type) -> Self {
+                self.add_term(var, -1.0);
+                self
             }
         }
+        forward_binop!(impl Sub, sub for LinearExpr<$var_type>, $var_type);
 
-        impl<'a> Sub<&'a $var_type> for LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
 
-            fn sub(self, var: &'a $var_type) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                result.add_term(var.clone(), -1.0);
-                result
-            }
-        }
-
-        impl<'a> Sub<$var_type> for &LinearExpr<$var_type> {
-            type Output = LinearExpr<$var_type>;
-
-            fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
-                let mut result = self.clone();
-                result.add_term(var, -1.0);
-                result
-            }
-        }
-
-        // ==================== Numeric Operations ====================
+        // ============================================================
+        //  NUMERIC OPERATIONS (Generics)
+        // ============================================================
+        
         $(
-            // 12. From<numeric> for LinearExpr
+            // --- Expr From Numeric ---
             impl From<$num_type> for LinearExpr<$var_type> {
                 fn from(constant: $num_type) -> Self {
                     LinearExpr::with_constant(constant as f64)
                 }
             }
 
-            // 13. LinearExpr + numeric (owned and reference)
+            // --- Expr + Num ---
             impl Add<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
-
-                fn add(self, constant: $num_type) -> Self {
-                    let mut result = self.clone();
-                    result.constant += constant as f64;
-                    result
+                fn add(mut self, constant: $num_type) -> Self {
+                    self.constant += constant as f64;
+                    self
                 }
             }
+            forward_binop!(impl Add, add for LinearExpr<$var_type>, $num_type);
 
-            impl<'a> Add<$num_type> for &'a LinearExpr<$var_type> {
-                type Output = LinearExpr<$var_type>;
-
-                fn add(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut result = self.clone();
-                    result.constant += constant as f64;
-                    result
-                }
-            }
-
-            // 14. numeric + LinearExpr (owned and reference)
+            // --- Num + Expr ---
             impl Add<LinearExpr<$var_type>> for $num_type {
                 type Output = LinearExpr<$var_type>;
-
-                fn add(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    let mut result = expr.clone();
-                    result.constant += self as f64;
-                    result
+                fn add(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                    expr.constant += self as f64;
+                    expr
                 }
             }
+            forward_binop!(impl Add, add for $num_type, LinearExpr<$var_type>);
 
-            impl<'a> Add<&'a LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn add(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    let mut result = expr.clone();
-                    result.constant += self as f64;
-                    result
-                }
-            }
-
-            // 15. LinearExpr - numeric (owned and reference)
+            // --- Expr - Num ---
             impl Sub<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
-
-                fn sub(self, constant: $num_type) -> Self {
-                    let mut result = self.clone();
-                    result.constant -= constant as f64;
-                    result
+                fn sub(mut self, constant: $num_type) -> Self {
+                    self.constant -= constant as f64;
+                    self
                 }
             }
+            forward_binop!(impl Sub, sub for LinearExpr<$var_type>, $num_type);
 
-            impl<'a> Sub<$num_type> for &'a LinearExpr<$var_type> {
-                type Output = LinearExpr<$var_type>;
-
-                fn sub(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut result = self.clone();
-                    result.constant -= constant as f64;
-                    result
-                }
-            }
-
-            // 16. numeric - LinearExpr (owned and reference)
+            // --- Num - Expr ---
             impl Sub<LinearExpr<$var_type>> for $num_type {
                 type Output = LinearExpr<$var_type>;
-
-                fn sub(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    let mut result = -expr;
-                    result.constant += self as f64;
-                    result
+                fn sub(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                    expr.scale(-1.0);
+                    expr.constant += self as f64;
+                    expr
                 }
             }
+            forward_binop!(impl Sub, sub for $num_type, LinearExpr<$var_type>);
 
-            impl<'a> Sub<&'a LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn sub(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    let mut result = -expr.clone();
-                    result.constant += self as f64;
-                    result
-                }
-            }
-
-           // 17. LinearExpr * numeric (owned and reference)
+            // --- Expr * Num ---
             impl Mul<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
-
-                fn mul(self, constant: $num_type) -> Self {
-                    let mut result = self.clone();
-                    for coefficient in result.terms.values_mut() {
-                        *coefficient *= constant as f64;
-                    }
-                    result.constant *= constant as f64;
-                    result
+                fn mul(mut self, constant: $num_type) -> Self {
+                    self.scale(constant as f64);
+                    self
                 }
             }
+            forward_binop!(impl Mul, mul for LinearExpr<$var_type>, $num_type);
 
-            impl<'a> Mul<$num_type> for &'a LinearExpr<$var_type> {
-                type Output = LinearExpr<$var_type>;
-
-                fn mul(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut result = self.clone();
-                    for coefficient in result.terms.values_mut() {
-                        *coefficient *= constant as f64;
-                    }
-                    result.constant *= constant as f64;
-                    result
-                }
-            }
-
-            // 18. numeric * LinearExpr (owned and reference)
+            // --- Num * Expr ---
             impl Mul<LinearExpr<$var_type>> for $num_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn mul(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
                     expr * self
                 }
             }
+            forward_binop!(impl Mul, mul for $num_type, LinearExpr<$var_type>);
 
-            impl<'a> Mul<&'a LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn mul(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    expr * self
-                }
-            }
-
-            // 19. LinearExpr / numeric (owned and reference)
+            // --- Expr / Num ---
             impl Div<$num_type> for LinearExpr<$var_type> {
                 type Output = Self;
-
-                fn div(self, constant: $num_type) -> Self {
-                    let mut result = self.clone();
-                    let divisor = constant as f64;
-                    for coefficient in result.terms.values_mut() {
-                        *coefficient /= divisor;
-                    }
-                    result.constant /= divisor;
-                    result
+                fn div(mut self, constant: $num_type) -> Self {
+                    self.scale(1.0 / (constant as f64));
+                    self
                 }
             }
+            forward_binop!(impl Div, div for LinearExpr<$var_type>, $num_type);
 
-            impl<'a> Div<$num_type> for &'a LinearExpr<$var_type> {
-                type Output = LinearExpr<$var_type>;
-
-                fn div(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut result = self.clone();
-                    let divisor = constant as f64;
-                    for coefficient in result.terms.values_mut() {
-                        *coefficient /= divisor;
-                    }
-                    result.constant /= divisor;
-                    result
-                }
-            }
-
-            // 20. ExprVariable + numeric (owned and reference)
+            // --- Var + Num ---
             impl Add<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn add(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self, 1.0);
+                    let mut terms = Vec::with_capacity(1);
+                    terms.push((self, 1.0));
                     LinearExpr::with_terms_and_constant(terms, constant as f64)
                 }
             }
+            forward_binop!(impl Add, add for $var_type, $num_type);
 
-            impl<'a> Add<$num_type> for &'a $var_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn add(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self.clone(), 1.0);
-                    LinearExpr::with_terms_and_constant(terms, constant as f64)
-                }
-            }
-
-            // 21. numeric + ExprVariable (owned and reference)
+            // --- Num + Var ---
             impl Add<$var_type> for $num_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn add(self, var: $var_type) -> LinearExpr<$var_type> {
                     var + self
                 }
             }
+            forward_binop!(impl Add, add for $num_type, $var_type);
 
-            impl<'a> Add<&'a $var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn add(self, var: &'a $var_type) -> LinearExpr<$var_type> {
-                    var + self
-                }
-            }
-
-            // 22. ExprVariable - numeric (owned and reference)
+            // --- Var - Num ---
             impl Sub<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn sub(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self, 1.0);
+                    let mut terms = Vec::with_capacity(1);
+                    terms.push((self, 1.0));
                     LinearExpr::with_terms_and_constant(terms, -(constant as f64))
                 }
             }
+            forward_binop!(impl Sub, sub for $var_type, $num_type);
 
-            impl<'a> Sub<$num_type> for &'a $var_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn sub(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self.clone(), 1.0);
-                    LinearExpr::with_terms_and_constant(terms, -(constant as f64))
-                }
-            }
-
-            // 23. numeric - ExprVariable (owned and reference)
+            // --- Num - Var ---
             impl Sub<$var_type> for $num_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(var, -1.0);
+                    let mut terms = Vec::with_capacity(1);
+                    terms.push((var, -1.0));
                     LinearExpr::with_terms_and_constant(terms, self as f64)
                 }
             }
+            forward_binop!(impl Sub, sub for $num_type, $var_type);
 
-            impl<'a> Sub<&'a $var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn sub(self, var: &'a $var_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(var.clone(), -1.0);
-                    LinearExpr::with_terms_and_constant(terms, self as f64)
-                }
-            }
-
-            // 24. ExprVariable * numeric (owned and reference)
+            // --- Var * Num ---
             impl Mul<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn mul(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self, constant as f64);
-                    LinearExpr::with_terms(terms)
+                    LinearExpr::with_term(self, constant as f64)
                 }
             }
+            forward_binop!(impl Mul, mul for $var_type, $num_type);
 
-            impl<'a> Mul<$num_type> for &'a $var_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn mul(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self.clone(), constant as f64);
-                    LinearExpr::with_terms(terms)
-                }
-            }
-
-            // 25. numeric * ExprVariable (owned and reference)
+            // --- Num * Var ---
             impl Mul<$var_type> for $num_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn mul(self, var: $var_type) -> LinearExpr<$var_type> {
-                    var * self
+                    LinearExpr::with_term(var, self as f64)
                 }
             }
+            forward_binop!(impl Mul, mul for $num_type, $var_type);
 
-            impl<'a> Mul<&'a $var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn mul(self, var: &'a $var_type) -> LinearExpr<$var_type> {
-                    var * self
-                }
-            }
-
-            // 26. ExprVariable / numeric (owned and reference)
+            // --- Var / Num ---
             impl Div<$num_type> for $var_type {
                 type Output = LinearExpr<$var_type>;
-
                 fn div(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self, 1.0 / (constant as f64));
-                    LinearExpr::with_terms(terms)
+                    LinearExpr::with_term(self, 1.0 / (constant as f64))
                 }
             }
-
-            impl<'a> Div<$num_type> for &'a $var_type {
-                type Output = LinearExpr<$var_type>;
-
-                fn div(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = HashMap::new();
-                    terms.insert(self.clone(), 1.0 / (constant as f64));
-                    LinearExpr::with_terms(terms)
-                }
-            }
+            forward_binop!(impl Div, div for $var_type, $num_type);
         )*
     };
 }

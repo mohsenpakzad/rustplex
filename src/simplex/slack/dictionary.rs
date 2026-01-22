@@ -143,8 +143,8 @@ impl SlackDictionary {
         let std_terms = expression
             .terms
             .iter()
-            .map(|(var, &coefficient)| (variable_map.get(var).unwrap().clone(), coefficient))
-            .collect::<HashMap<DictVar, f64>>();
+            .map(|(var, coefficient)| (variable_map.get(var).unwrap().clone(), *coefficient))
+            .collect::<Vec<(DictVar, f64)>>();
 
         LinearExpr::with_terms_and_constant(std_terms, expression.constant)
     }
