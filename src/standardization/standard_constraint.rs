@@ -36,7 +36,7 @@ impl StandardConstraint {
         self
     }
 
-    /// Returns the name of the constraint, if it's empty return memory address.
+    /// Returns the name of the constraint.
     pub fn name(&self) -> String {
          if let Some(name) = &self.name {
             name.clone()

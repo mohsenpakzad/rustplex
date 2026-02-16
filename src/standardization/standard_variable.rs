@@ -60,7 +60,7 @@ impl StandardVariable {
         self
     }
 
-    /// Returns the name of the standard variable, if it's empty return memory address.
+    /// Returns the name of the standard variable.
     pub fn name(&self) -> String {
         if let Some(name) = &self.name {
             name.clone()

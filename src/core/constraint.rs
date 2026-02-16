@@ -31,7 +31,7 @@ pub struct Constraint {
 
 // Public Getters for Read-Only Access
 impl Constraint {
-    /// Returns the name of the constraint, if it's empty return memory address.
+    /// Returns the name of the constraint.
     pub fn name(&self) -> String {
         if let Some(name) = &self.name {
             name.clone()

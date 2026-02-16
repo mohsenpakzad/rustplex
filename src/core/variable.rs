@@ -37,7 +37,7 @@ pub struct Variable {
 
 // Public Getters for Read-Only Access
 impl Variable {
-    /// Returns the name of the variable, if it's empty return memory address.
+    /// Returns the name of the variable.
     pub fn name(&self) -> String {
         if let Some(name) = &self.name {
             name.clone()
