@@ -1,7 +1,7 @@
 mod common;
 
 use common::assert_approx_eq;
-use rustplex::{error::SolverError, ConstraintSense, Model, ObjectiveSense, SolverStatus};
+use rustplex::{error::SolverError, Model, ObjectiveSense::{Maximize, Minimize}, SolverStatus};
 
 /// Test Case 1: Standard Maximization Problem
 ///
@@ -25,14 +25,14 @@ use rustplex::{error::SolverError, ConstraintSense, Model, ObjectiveSense, Solve
 #[test]
 fn test_maximization_standard() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(0.0);
-    let y = model.add_variable().with_name("y").with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
+    let y = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, 3.0 * &x + 4.0 * &y);
+    model.set_objective(Maximize, 3.0 * x + 4.0 * y);
 
-    model.add_constraint(&x + 2.0 * &y, ConstraintSense::LessEqual, 14.0);
-    model.add_constraint(3.0 * &x - &y, ConstraintSense::LessEqual, 0.0);
-    model.add_constraint(&x - &y, ConstraintSense::LessEqual, 2.0);
+    model.add_constraint(x + 2.0 * y).le(14.0);
+    model.add_constraint(3.0 * x - y).le(0.0);
+    model.add_constraint(x - y).le(2.0);
 
     assert!(model.solve().is_ok());
 
@@ -42,8 +42,8 @@ fn test_maximization_standard() {
     assert_approx_eq(solution.objective_value().unwrap(), 30.0);
 
     let vars = solution.variable_values().as_ref().unwrap();
-    assert_approx_eq(*vars.get(&x).unwrap(), 2.0);
-    assert_approx_eq(*vars.get(&y).unwrap(), 6.0);
+    assert_approx_eq(*vars.get(x).unwrap(), 2.0);
+    assert_approx_eq(*vars.get(y).unwrap(), 6.0);
 }
 
 /// Test Case 2: Minimization Problem
@@ -68,14 +68,14 @@ fn test_maximization_standard() {
 #[test]
 fn test_minimization_standard() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(0.0);
-    let y = model.add_variable().with_name("y").with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
+    let y = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Minimize, 2.0 * &x + 3.0 * &y);
+    model.set_objective(Minimize, 2.0 * x + 3.0 * y);
 
-    model.add_constraint(&x + &y, ConstraintSense::GreaterEqual, 10.0);
-    model.add_constraint(&x, ConstraintSense::LessEqual, 8.0);
-    model.add_constraint(&y, ConstraintSense::LessEqual, 12.0);
+    model.add_constraint(x + y).ge(10.0);
+    model.add_constraint(x).le(8.0);
+    model.add_constraint(y).le(12.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -100,12 +100,12 @@ fn test_minimization_standard() {
 #[test]
 fn test_infeasible_problem() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x);
+    model.set_objective(Maximize, x);
 
-    model.add_constraint(&x, ConstraintSense::GreaterEqual, 5.0);
-    model.add_constraint(&x, ConstraintSense::LessEqual, 3.0);
+    model.add_constraint(x).ge(5.0);
+    model.add_constraint(x).le(3.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -129,11 +129,11 @@ fn test_infeasible_problem() {
 #[test]
 fn test_unbounded_problem() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x);
+    model.set_objective(Maximize, x);
 
-    model.add_constraint(&x, ConstraintSense::GreaterEqual, 5.0);
+    model.add_constraint(x).ge(5.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -161,12 +161,12 @@ fn test_unbounded_problem() {
 #[test]
 fn test_equality_constraint() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(0.0);
-    let y = model.add_variable().with_name("y").with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
+    let y = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x + &y);
+    model.set_objective(Maximize, x + y);
 
-    model.add_constraint(2.0 * &x + &y, ConstraintSense::Equal, 10.0);
+    model.add_constraint(2.0 * x + y).eq(10.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -190,9 +190,9 @@ fn test_equality_constraint() {
 #[test]
 fn test_boxed_variables() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_bounds(2.0..=5.0);
+    let x = model.add_variable().bounds(2.0..=5.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x);
+    model.set_objective(Maximize, x);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -217,10 +217,10 @@ fn test_boxed_variables() {
 #[test]
 fn test_negative_variables() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(-5.0);
+    let x = model.add_variable().lower_bound(-5.0).continuous();
 
-    model.set_objective(ObjectiveSense::Minimize, &x);
-    model.add_constraint(&x, ConstraintSense::LessEqual, 10.0);
+    model.set_objective(Minimize, x);
+    model.add_constraint(x).le(10.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -247,13 +247,13 @@ fn test_negative_variables() {
 #[test]
 fn test_redundant_constraints() {
     let mut model = Model::new();
-    let x1 = model.add_variable().with_lower_bound(0.0);
-    let x2 = model.add_variable().with_lower_bound(0.0);
+    let x1 = model.add_variable().lower_bound(0.0).continuous();
+    let x2 = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x1 + &x2);
+    model.set_objective(Maximize, x1 + x2);
 
-    model.add_constraint(&x1 + &x2, ConstraintSense::LessEqual, 10.0);
-    model.add_constraint(&x1 + &x2, ConstraintSense::LessEqual, 12.0);
+    model.add_constraint(x1 + x2).le(10.0);
+    model.add_constraint(x1 + x2).le(12.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -277,7 +277,7 @@ fn test_integer_not_supported() {
     let mut model = Model::new();
     let _x = model.add_variable().integer();
 
-    model.set_objective(ObjectiveSense::Maximize, &_x);
+    model.set_objective(Maximize, _x);
 
     let result = model.solve();
     assert!(result.is_err());
@@ -314,19 +314,19 @@ fn test_integer_not_supported() {
 fn test_complex_degeneracy_case() {
     let mut model = Model::new();
 
-    let x0 = model.add_variable().with_name("x0").with_lower_bound(0f64);
-    let x1 = model.add_variable().with_name("x1").with_lower_bound(0f64);
-    let x2 = model.add_variable().with_name("x2").with_lower_bound(0f64);
-    let x3 = model.add_variable().with_name("x3").with_lower_bound(0f64);
-    let x4 = model.add_variable().with_name("x4").with_lower_bound(0f64);
-    let x5 = model.add_variable().with_name("x5").with_lower_bound(0f64);
+    let x0 = model.add_variable().lower_bound(0f64).continuous();
+    let x1 = model.add_variable().lower_bound(0f64).continuous();
+    let x2 = model.add_variable().lower_bound(0f64).continuous();
+    let x3 = model.add_variable().lower_bound(0f64).continuous();
+    let x4 = model.add_variable().lower_bound(0f64).continuous();
+    let x5 = model.add_variable().lower_bound(0f64).continuous();
 
-    model.set_objective(ObjectiveSense::Minimize, &x0 + &x1 + &x2 + &x3 + &x4 + &x5);
+    model.set_objective(Minimize, x0 + x1 + x2 + x3 + x4 + x5);
 
-    model.add_constraint(&x4 + &x5, ConstraintSense::Equal, 3.0);
-    model.add_constraint(&x1 + &x5, ConstraintSense::Equal, 5.0);
-    model.add_constraint(&x2 + &x3 + &x4, ConstraintSense::Equal, 4.0);
-    model.add_constraint(&x0 + &x1 + &x3, ConstraintSense::Equal, 7.0);
+    model.add_constraint(x4 + x5).eq(3.0);
+    model.add_constraint(x1 + x5).eq(5.0);
+    model.add_constraint(x2 + x3 + x4).eq(4.0);
+    model.add_constraint(x0 + x1 + x3).eq(7.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -342,17 +342,17 @@ fn test_complex_degeneracy_case() {
 #[test]
 fn test_incremental_solving() {
     let mut model = Model::new();
-    let x = model.add_variable().with_name("x").with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x);
-    model.add_constraint(&x, ConstraintSense::LessEqual, 10.0);
+    model.set_objective(Maximize, x);
+    model.add_constraint(x).le(10.0);
 
     // First Run
     assert!(model.solve().is_ok());
     assert_approx_eq(model.solution().objective_value().unwrap(), 10.0);
 
     // Modify Model
-    model.add_constraint(&x, ConstraintSense::LessEqual, 5.0);
+    model.add_constraint(x).le(5.0);
 
     // Second Run
     assert!(model.solve().is_ok());
@@ -366,14 +366,14 @@ fn test_incremental_solving() {
 #[test]
 fn test_numerical_stability() {
     let mut model = Model::new();
-    let x = model.add_variable().with_lower_bound(0.0);
-    let y = model.add_variable().with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
+    let y = model.add_variable().lower_bound(0.0).continuous();
 
     // Big coefficient vs Small coefficient
-    model.set_objective(ObjectiveSense::Maximize, 1_000_000.0 * &x + 0.000_001 * &y);
+    model.set_objective(Maximize, 1_000_000.0 * x + 0.000_001 * y);
 
-    model.add_constraint(&x, ConstraintSense::LessEqual, 1.0);
-    model.add_constraint(&y, ConstraintSense::LessEqual, 1_000_000.0);
+    model.add_constraint(x).le(1.0);
+    model.add_constraint(y).le(1_000_000.0);
 
     assert!(model.solve().is_ok());
 
@@ -386,11 +386,11 @@ fn test_numerical_stability() {
 #[test]
 fn test_zero_objective() {
     let mut model = Model::new();
-    let x = model.add_variable().with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
 
     // Maximize 0 (Find any feasible solution)
-    model.set_objective(ObjectiveSense::Maximize, 0.0 * &x);
-    model.add_constraint(&x, ConstraintSense::LessEqual, 5.0);
+    model.set_objective(Maximize, 0.0 * x);
+    model.add_constraint(x).le(5.0);
 
     assert!(model.solve().is_ok());
     // Objective value should be strictly 0.0
@@ -404,11 +404,11 @@ fn test_zero_objective() {
 #[test]
 fn test_unused_variable_in_objective() {
     let mut model = Model::new();
-    let x = model.add_variable().with_lower_bound(0.0);
-    let y = model.add_variable().with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
+    let y = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x); // y is ignored here
-    model.add_constraint(&x + &y, ConstraintSense::LessEqual, 10.0);
+    model.set_objective(Maximize, x); // y is ignored here
+    model.add_constraint(x + y).le(10.0);
 
     assert!(model.solve().is_ok());
     assert_approx_eq(model.solution().objective_value().unwrap(), 10.0);
@@ -425,21 +425,21 @@ fn test_scale_hypercube_50_vars() {
     let mut objective = rustplex::core::expression::LinearExpr::new();
 
     // Create 50 variables
-    for i in 0..n {
+    for _ in 0..n {
         let v = model
             .add_variable()
-            .with_name(format!("x{}", i))
-            .with_lower_bound(0.0);
+            .lower_bound(0.0)
+            .continuous();
 
         // Add constraint x_i <= 1
-        model.add_constraint(&v, ConstraintSense::LessEqual, 1.0);
+        model.add_constraint(v).le(1.0);
 
         // Add to objective: + 1.0 * x_i
         objective.add_term(v.clone(), 1.0);
         vars.push(v);
     }
 
-    model.set_objective(ObjectiveSense::Maximize, objective);
+    model.set_objective(Maximize, objective);
 
     let start = std::time::Instant::now();
     assert!(model.solve().is_ok());
@@ -456,9 +456,9 @@ fn test_scale_hypercube_50_vars() {
 #[test]
 fn test_no_constraints_unbounded() {
     let mut model = Model::new();
-    let x = model.add_variable().with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x);
+    model.set_objective(Maximize, x);
 
     assert!(model.solve().is_ok());
     assert!(matches!(model.solution().status(), SolverStatus::Unbounded));
@@ -469,9 +469,9 @@ fn test_no_constraints_unbounded() {
 #[test]
 fn test_no_constraints_optimal() {
     let mut model = Model::new();
-    let x = model.add_variable().with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Minimize, &x);
+    model.set_objective(Minimize, x);
 
     assert!(model.solve().is_ok());
     assert!(matches!(model.solution().status(), SolverStatus::Optimal));
@@ -492,24 +492,20 @@ fn test_no_constraints_optimal() {
 #[test]
 fn test_klee_minty_3d() {
     let mut model = Model::new();
-    let x1 = model.add_variable().with_lower_bound(0.0);
-    let x2 = model.add_variable().with_lower_bound(0.0);
-    let x3 = model.add_variable().with_lower_bound(0.0);
+    let x1 = model.add_variable().lower_bound(0.0).continuous();
+    let x2 = model.add_variable().lower_bound(0.0).continuous();
+    let x3 = model.add_variable().lower_bound(0.0).continuous();
 
     // Coefficients: 10^2, 10^1, 10^0
     model.set_objective(
-        ObjectiveSense::Maximize,
-        100.0 * &x1 + 10.0 * &x2 + 1.0 * &x3,
+        Maximize,
+        100.0 * x1 + 10.0 * x2 + 1.0 * x3,
     );
 
     // Recursive constraints
-    model.add_constraint(&x1, ConstraintSense::LessEqual, 1.0);
-    model.add_constraint(20.0 * &x1 + &x2, ConstraintSense::LessEqual, 100.0);
-    model.add_constraint(
-        200.0 * &x1 + 20.0 * &x2 + &x3,
-        ConstraintSense::LessEqual,
-        10000.0,
-    );
+    model.add_constraint(x1).le(1.0);
+    model.add_constraint(20.0 * x1 + x2).le(100.0);
+    model.add_constraint(200.0 * x1 + 20.0 * x2 + x3).le(10000.0);
 
     assert!(model.solve().is_ok());
     let solution = model.solution();
@@ -530,8 +526,8 @@ fn test_reject_binary_variables() {
     // Create a binary variable (0 or 1)
     let b = model.add_variable().binary();
 
-    model.set_objective(ObjectiveSense::Maximize, &b);
-    model.add_constraint(&b, ConstraintSense::LessEqual, 0.5);
+    model.set_objective(Maximize, b);
+    model.add_constraint(b).le(0.5);
 
     // This should fail because is_lp() returns false for Binary types
     let result = model.solve();
@@ -550,17 +546,17 @@ fn test_reject_binary_variables() {
 #[test]
 fn test_fractional_coefficients() {
     let mut model = Model::new();
-    let x = model.add_variable().with_lower_bound(0.0);
-    let y = model.add_variable().with_lower_bound(0.0);
+    let x = model.add_variable().lower_bound(0.0).continuous();
+    let y = model.add_variable().lower_bound(0.0).continuous();
 
-    model.set_objective(ObjectiveSense::Maximize, &x + &y);
+    model.set_objective(Maximize, x + y);
 
     // 3x + 3y <= 1 (Wait, let's make it 3x + y <= 1)
     // If we maximize x+y:
     // Corner 1: x=0, y=1 => Obj = 1
     // Corner 2: x=1/3, y=0 => Obj = 0.33
     // Corner 3: x=0, y=0
-    model.add_constraint(3.0 * &x + &y, ConstraintSense::LessEqual, 1.0);
+    model.add_constraint(3.0 * x + y).le(1.0);
 
     assert!(model.solve().is_ok());
     assert_approx_eq(model.solution().objective_value().unwrap(), 1.0);

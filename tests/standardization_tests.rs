@@ -28,17 +28,17 @@ fn test_standard_model_optimal() {
     let mut std_model = StandardModel::new();
 
     // 1. Define Standard Variables (implicitly >= 0)
-    let x1 = std_model.add_variable().with_name("x1");
-    let x2 = std_model.add_variable().with_name("x2");
+    let x1 = std_model.add_variable().continuous();
+    let x2 = std_model.add_variable().continuous();
 
     // 2. Define Objective (implicitly Maximize)
     std_model.set_objective(3.0 * &x1 + 2.0 * &x2);
 
     // 3. Define Constraints (implicitly LHS <= RHS)
     // 2x1 + x2 <= 10
-    std_model.add_constraint(2.0 * &x1 + &x2, 10.0);
+    std_model.add_constraint(2.0 * x1 + x2).le(10.0);
     // x1 + 3x2 <= 15
-    std_model.add_constraint(&x1 + 3.0 * &x2, 15.0);
+    std_model.add_constraint(&x1 + 3.0 * &x2).le(15.0);
 
     // 4. Solve
     assert!(std_model.solve().is_ok());
@@ -65,12 +65,12 @@ fn test_standard_model_optimal() {
 fn test_standard_model_infeasible() {
     let mut std_model = StandardModel::new();
 
-    let x = std_model.add_variable().with_name("x");
+    let x = std_model.add_variable().continuous();
 
     std_model.set_objective(1.0 * &x);
 
     // Constraint: x <= -5
-    std_model.add_constraint(1.0 * &x, -5.0);
+    std_model.add_constraint(1.0 * &x).le(-5.0);
 
     assert!(std_model.solve().is_ok());
 
@@ -96,13 +96,13 @@ fn test_standard_model_infeasible() {
 fn test_standard_model_unbounded() {
     let mut std_model = StandardModel::new();
 
-    let x = std_model.add_variable().with_name("x");
+    let x = std_model.add_variable().continuous();
 
     std_model.set_objective(1.0 * &x);
 
     // Constraint: -x <= 5
     // Note: In standard form, coefficients can be negative.
-    std_model.add_constraint(-1.0 * &x, 5.0);
+    std_model.add_constraint(-1.0 * &x).le(5.0);
 
     assert!(std_model.solve().is_ok());
 
@@ -131,13 +131,13 @@ fn test_standard_model_unbounded() {
 fn test_standard_model_needs_phase_1() {
     let mut std_model = StandardModel::new();
 
-    let x = std_model.add_variable().with_name("x");
+    let x = std_model.add_variable().continuous();
 
     // Maximize -x
     std_model.set_objective(-1.0 * &x);
 
     // Constraint: -x <= -10 (equivalent to x >= 10)
-    std_model.add_constraint(-1.0 * &x, -10.0);
+    std_model.add_constraint(-1.0 * &x).le(-10.0);
 
     assert!(std_model.solve().is_ok());
 
