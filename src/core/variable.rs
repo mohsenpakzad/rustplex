@@ -1,23 +1,65 @@
-use std::cell::RefCell;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
-use std::rc::Rc;
+use slotmap::{new_key_type, DenseSlotMap};
 
-use super::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
+use crate::core::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
 
-#[derive(Debug)]
-struct Variable {
-    name: Option<String>,
-    var_type: VariableType,
-    bounds: RangeInclusive<f64>,
+new_key_type! {
+    pub struct VariableKey;
 }
 
-#[derive(Debug, Clone)]
+impl fmt::Display for VariableKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Displays the internal ID (e.g., "Var(1v1)")
+        write!(f, "VariableKey({:?})", self.0)
+    }
+}
+
+impl ExprVariable for VariableKey {}
+
+impl_expr_display!(VariableKey);
+impl_expr_ops!(VariableKey, [f64, i32]);
+
+#[derive(Debug, Clone, Copy)]
 pub enum VariableType {
     Continuous,
     Integer,
     Binary,
+}
+
+#[derive(Debug)]
+pub struct Variable {
+    name: Option<String>,
+    var_type: VariableType,
+    lower_bound: f64,
+    upper_bound: f64,
+}
+
+// Public Getters for Read-Only Access
+impl Variable {
+    /// Returns the name of the variable, if it's empty return memory address.
+    pub fn name(&self) -> String {
+        if let Some(name) = &self.name {
+            name.clone()
+        } else {
+            "<unnamed>".to_string()
+        }
+    }
+
+    /// Returns the type of the variable.
+    pub fn var_type(&self) -> VariableType {
+        self.var_type
+    }
+
+    /// Returns the lower bound of the variable.
+    pub fn lower_bound(&self) -> f64 {
+        self.lower_bound
+    }
+
+    /// Returns the upper bound of the variable.
+    pub fn upper_bound(&self) -> f64 {
+        self.upper_bound
+    }
 }
 
 impl Default for Variable {
@@ -25,115 +67,101 @@ impl Default for Variable {
         Self {
             name: None,
             var_type: VariableType::Continuous,
-            bounds: f64::NEG_INFINITY..=f64::INFINITY,
+            lower_bound: f64::NEG_INFINITY,
+            upper_bound: f64::INFINITY,
         }
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Var(Rc<RefCell<Variable>>);
-
-impl Var {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn continuous(self) -> Self {
-        self.0.borrow_mut().var_type = VariableType::Continuous;
-        self
-    }
-
-    pub fn integer(self) -> Self {
-        self.0.borrow_mut().var_type = VariableType::Integer;
-        self
-    }
-
-    pub fn binary(self) -> Self {
-        {
-            let mut var = self.0.borrow_mut();
-            var.var_type = VariableType::Binary;
-            var.bounds = 0.0..=1.0;
-        }
-        self
-    }
-
-    pub fn with_name(self, name: impl Into<String>) -> Self {
-        self.0.borrow_mut().name = Some(name.into());
-        self
-    }
-
-    pub fn with_bounds(self, bounds: RangeInclusive<f64>) -> Self {
-        self.0.borrow_mut().bounds = bounds;
-        self
-    }
-
-    pub fn with_lower_bound(self, lb: f64) -> Self {
-        {
-            let mut var: std::cell::RefMut<'_, Variable> = self.0.borrow_mut();
-            var.bounds = lb..=*var.bounds.end()
-        }
-        self
-    }
-
-    pub fn with_upper_bound(self, ub: f64) -> Self {
-        {
-            let mut var: std::cell::RefMut<'_, Variable> = self.0.borrow_mut();
-            var.bounds = *var.bounds.start()..=ub;
-        }
-        self
-    }
-
-    pub fn name(&self) -> Option<String> {
-        self.0.borrow().name.clone()
-    }
-
-    pub fn name_or_default(&self) -> String {
-        self.0
-            .borrow()
-            .name
-            .clone()
-            .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
-    }
-
-    pub fn var_type(&self) -> VariableType {
-        self.0.borrow().var_type.clone()
-    }
-
-    pub fn lower_bound(&self) -> f64 {
-        *self.0.borrow().bounds.start()
-    }
-
-    pub fn upper_bound(&self) -> f64 {
-        *self.0.borrow().bounds.end()
-    }
-}
-
-impl PartialEq for Var {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-impl Eq for Var {}
-
-impl Hash for Var {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        (Rc::as_ptr(&self.0) as usize).hash(state);
-    }
-}
-
-impl fmt::Display for Var {
+impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name_display = match self.name() {
-            Some(name) => name.clone(),
-            None => self.name_or_default(),
+        let type_str = match self.var_type {
+            VariableType::Continuous => "cont",
+            VariableType::Integer => "int",
+            VariableType::Binary => "bin",
         };
 
-        write!(f, "Var({})", name_display,)
+        write!(
+            f,
+            "Variable({}:{} ∈ [{}, {}])",
+            self.name(),
+            type_str,
+            self.lower_bound,
+            self.upper_bound
+        )
     }
 }
 
-impl ExprVariable for Var {}
+// --- Variable Builder ---
 
-impl_expr_display!(Var);
-impl_expr_ops!(Var, [f64, f32, i8, i16, i32, i64, i128, isize]);
+/// A builder for creating and configuring a new variable.
+pub struct VariableBuilder<'a> {
+    arena: &'a mut DenseSlotMap<VariableKey, Variable>,
+    data: Variable,
+}
+
+impl<'a> VariableBuilder<'a> {
+    pub(crate) fn new(arena: &'a mut DenseSlotMap<VariableKey, Variable>) -> Self {
+        Self {
+            arena,
+            data: Variable::default(),
+        }
+    }
+
+    /// Sets the name of the variable.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.data.name = Some(name.into());
+        self
+    }
+
+    /// Sets the lower bound of the variable.
+    pub fn lower_bound(mut self, lb: f64) -> Self {
+        self.data.lower_bound = lb;
+        self
+    }
+
+    /// Sets the upper bound of the variable.
+    pub fn upper_bound(mut self, ub: f64) -> Self {
+        self.data.upper_bound = ub;
+        self
+    }
+
+    /// Convenience method for setting bounds using a Range.
+    /// Example: `.bounds(0.0..=10.0)`
+    pub fn bounds(mut self, range: RangeInclusive<f64>) -> Self {
+        self.data.lower_bound = *range.start();
+        self.data.upper_bound = *range.end();
+        self
+    }
+
+    // --- Terminating Methods ---
+
+    /// Finalizes the variable as **Continuous**.
+    pub fn continuous(self) -> VariableKey {
+        self.finish(VariableType::Continuous)
+    }
+
+    /// Alias for `continuous()`.
+    pub fn real(self) -> VariableKey {
+        self.continuous()
+    }
+
+    /// Finalizes the variable as **Integer**.
+    pub fn integer(self) -> VariableKey {
+        self.finish(VariableType::Integer)
+    }
+
+    /// Finalizes the variable as **Binary**.
+    ///
+    /// This automatically sets the bounds to [0.0, 1.0].
+    pub fn binary(mut self) -> VariableKey {
+        self.data.lower_bound = 0.0;
+        self.data.upper_bound = 1.0;
+        self.finish(VariableType::Binary)
+    }
+
+    fn finish(mut self, var_type: VariableType) -> VariableKey {
+        self.data.var_type = var_type;
+        self.arena.insert(self.data)
+    }
+}

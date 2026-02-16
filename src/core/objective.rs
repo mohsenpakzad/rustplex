@@ -2,12 +2,12 @@ use std::fmt;
 
 use crate::core::expression::LinearExpr;
 
-use super::variable::Var;
+use super::variable::VariableKey;
 
 #[derive(Debug, Clone)]
 pub struct Objective {
     sense: ObjectiveSense,
-    expression: LinearExpr<Var>,
+    expression: LinearExpr<VariableKey>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -17,7 +17,7 @@ pub enum ObjectiveSense {
 }
 
 impl Objective {
-    pub fn new(sense: ObjectiveSense, expression: LinearExpr<Var>) -> Self {
+    pub fn new(sense: ObjectiveSense, expression: LinearExpr<VariableKey>) -> Self {
         Self { sense, expression }
     }
 
@@ -25,7 +25,7 @@ impl Objective {
         &self.sense
     }
 
-    pub fn expr(&self) -> &LinearExpr<Var> {
+    pub fn expr(&self) -> &LinearExpr<VariableKey> {
         &self.expression
     }
 }

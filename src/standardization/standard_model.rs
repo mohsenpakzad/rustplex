@@ -1,34 +1,35 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
+use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
     core::{
-        constraint::{Constr, ConstraintSense},
+        constraint::{Constraint, ConstraintSense},
         expression::LinearExpr,
         model::Model,
         objective::Objective,
-        variable::{Var, VariableType},
+        variable::{VariableKey, Variable, VariableType},
     },
     error::SolverError,
     simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
-};
-
-use super::{
-    standard_constraint::StdConstr, standard_objective::StandardObjective,
-    standard_variable::StdVar,
+    standardization::{
+        standard_constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey}, 
+        standard_objective::StandardObjective,
+        standard_variable::{StandardVariable, StandardVariableBuilder, StandardVariableKey},
+    }
 };
 
 /// A model that enforces standard form constraints
 #[derive(Debug, Default)]
 pub struct StandardModel {
-    variables: Vec<StdVar>,
-    constraints: Vec<StdConstr>,
+    variables: DenseSlotMap<StandardVariableKey, StandardVariable>,
+    constraints: DenseSlotMap<StandardConstraintKey, StandardConstraint>,
     objective: Option<StandardObjective>,
-    variable_map: Option<VariableMap>,
-    solution: SolverSolution<StdVar>,
+    mapping: Option<VarMapping>,
+    solution: SolverSolution<StandardVariableKey>,
     config: Option<SolverConfig>,
 }
 
-type VariableMap = HashMap<Var, (Option<StdVar>, Option<StdVar>)>;
+type VarMapping = SecondaryMap<VariableKey, (Option<StandardVariableKey>, Option<StandardVariableKey>)>;
 
 impl StandardModel {
     pub fn new() -> Self {
@@ -36,54 +37,53 @@ impl StandardModel {
     }
 
     pub fn from_model(model: &Model) -> Self {
-        // Step 1: Create a mapping of original variables to their standardized form
-        let variable_map = model
-            .variables()
-            .iter()
-            .map(|var| (var.clone(), (Self::standardize_variable(var))))
-            .collect::<VariableMap>();
+        let mut standard_variables = DenseSlotMap::with_key();
+        let mut mapping: VarMapping = SecondaryMap::new();
 
-        // Step 2: Standardize variables
-        let standard_variables = variable_map
-            .values()
-            .flat_map(|std_var| match std_var {
-                (Some(pos_var), Some(neg_var)) => vec![pos_var.clone(), neg_var.clone()],
-                (Some(pos_var), None) => vec![pos_var.clone()],
-                (None, Some(neg_var)) => vec![neg_var.clone()],
-                _ => vec![],
-            })
-            .collect::<Vec<_>>();
+        // Step 1: Standardize variables and insert them into the arena immediately
+        for (var_key, variable_data) in model.variables() {
+            let (pos_data, neg_data) = Self::standardize_variable(variable_data);
+            
+            let pos_key = pos_data.map(|d| standard_variables.insert(d));
+            let neg_key = neg_data.map(|d| standard_variables.insert(d));
 
-        // Step 3: Standardize constraints and add variables upper bound constraints
-        let standard_constraints: Vec<_> = model
-            .constraints()
-            .iter()
-            .flat_map(|constraint| Self::standardize_constraint(constraint, &variable_map))
-            .chain(standard_variables.iter().filter_map(|std_var| {
-                // Create upper bound constraints for variables
-                let ub = std_var.upper_bound();
-                if ub < f64::INFINITY {
-                    Some(StdConstr::new(
-                        LinearExpr::with_term(std_var.clone(), 1.0),
-                        ub,
-                    ))
-                } else {
-                    None
-                }
-            }))
-            .collect();
+            mapping.insert(var_key, (pos_key, neg_key));
+        }
 
-        // Step 4: Transform and standardize objective
+        // Step 2: Standardize constraints and add variables upper bound constraints
+        let mut standard_constraints = DenseSlotMap::with_key();
+
+        // 2a. Process constraints from the original model
+        for constraint in model.constraints().values() {
+            let std_constrs = Self::standardize_constraint(constraint, &standard_variables,  &mapping);
+            for constr in std_constrs {
+                standard_constraints.insert(constr);
+            }
+        }
+
+        // 2b. Add upper bound constraints for variables
+        // We iterate over the generated standard variables to check their bounds
+        for (std_key, std_var) in standard_variables.iter() {
+             let ub = std_var.upper_bound();
+             if ub < f64::INFINITY {
+                standard_constraints.insert(StandardConstraint::new(
+                    LinearExpr::with_term(std_key, 1.0),
+                    ub
+                ));
+            }
+        }
+
+        // Step 3: Transform and standardize objective
         let standard_objective = model
             .objective()
             .as_ref()
-            .map(|objective| Self::standardize_objective(&objective, &variable_map));
+            .map(|objective| Self::standardize_objective(objective, &standard_variables, &mapping));
 
         Self {
             variables: standard_variables,
             constraints: standard_constraints,
             objective: standard_objective,
-            variable_map: Some(variable_map),
+            mapping: Some(mapping),
             solution: SolverSolution::default(),
             config: None,
         }
@@ -95,21 +95,17 @@ impl StandardModel {
     }
 
     /// Add a new non-negative variable
-    pub fn add_variable(&mut self) -> StdVar {
-        let std_var = StdVar::new();
-        self.variables.push(std_var.clone());
-        std_var
+    pub fn add_variable(&mut self) -> StandardVariableBuilder<'_> {
+        StandardVariableBuilder::new(&mut self.variables)
     }
 
     /// Add a constraint in standard form: lhs ≤ rhs_constant
-    pub fn add_constraint(&mut self, lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> StdConstr {
-        let std_constr = StdConstr::new(lhs.into(), rhs);
-        self.constraints.push(std_constr.clone());
-        std_constr
+    pub fn add_constraint(&mut self, lhs: LinearExpr<StandardVariableKey>) -> StandardConstraintBuilder<'_> {
+        StandardConstraintBuilder::new(&mut self.constraints, lhs)
     }
 
     /// Set the maximization objective
-    pub fn set_objective(&mut self, expression: impl Into<LinearExpr<StdVar>>) {
+    pub fn set_objective(&mut self, expression: impl Into<LinearExpr<StandardVariableKey>>) {
         self.objective = Some(StandardObjective::new(expression.into()));
     }
 
@@ -126,11 +122,11 @@ impl StandardModel {
         Ok(())
     }
 
-    pub fn variables(&self) -> &Vec<StdVar> {
+    pub fn variables(&self) -> &DenseSlotMap<StandardVariableKey, StandardVariable> {
         &self.variables
     }
 
-    pub fn constraints(&self) -> &Vec<StdConstr> {
+    pub fn constraints(&self) -> &DenseSlotMap<StandardConstraintKey, StandardConstraint> {
         &self.constraints
     }
 
@@ -138,41 +134,52 @@ impl StandardModel {
         &self.objective
     }
 
-    pub fn solution(&self) -> &SolverSolution<StdVar> {
+    pub fn solution(&self) -> &SolverSolution<StandardVariableKey> {
         &self.solution
     }
 
     /// Helper to look up the value of an original variable from the standardized solution.
-    pub fn get_variable_value(&self, var: &Var) -> Option<f64> {
-        let variable_map = self.variable_map.as_ref()?;
+    pub fn get_variable_value(&self, var: VariableKey) -> Option<f64> {
+        let mapping = self.mapping.as_ref()?;
         let solution_values = self.solution.variable_values().as_ref()?;
-        let std_var = variable_map.get(var)?;
+        let std_var = mapping.get(var)?;
 
         Some(match std_var {
             // Case: Split variable (x = x_pos - x_neg)
             (Some(pos), Some(neg)) => {
-                let pos_value = solution_values.get(pos).unwrap() + pos.shift();
-                let neg_value = solution_values.get(neg).unwrap() + neg.shift();
-                pos_value - neg_value
+                let pos_value = solution_values.get(*pos).unwrap();
+                let pos_shift = self.variables.get(*pos).unwrap().shift();
+
+                let neg_value = solution_values.get(*neg).unwrap();
+                let neg_shift = self.variables.get(*neg).unwrap().shift();
+                
+                (pos_value + pos_shift) - (neg_value + neg_shift)
             }
             // Case: Positive only (x = x_pos + shift)
-            (Some(pos), None) => solution_values.get(pos).unwrap() + pos.shift(),
+            (Some(pos), None) => {
+                let pos_shift = self.variables.get(*pos).unwrap().shift();
+                solution_values.get(*pos).unwrap() + pos_shift
+            }
             // Case: Negative only (x = -x_neg + shift)
-            (None, Some(neg)) => -solution_values.get(neg).unwrap() + neg.shift(),
+            (None, Some(neg)) => {
+                let neg_shift = self.variables.get(*neg).unwrap().shift();
+                -solution_values.get(*neg).unwrap() + neg_shift
+            }
             // Case: Variable optimized out or not found
             _ => 0.0,
         })
     }
 
     /// Standardize a variable into standard form (non-negative variables)
-    fn standardize_variable(var: &Var) -> (Option<StdVar>, Option<StdVar>) {
-        let std_var_name = format!("FromVar: {}", var.name_or_default());
+    fn standardize_variable(var: &Variable) -> (Option<StandardVariable>, Option<StandardVariable>) {
+        // let std_var_name = format!("FromVar: {}", var.name_or_default());
+        let std_var_name = format!("FromVariable: {}", var.name());
 
         match var.var_type() {
             VariableType::Binary => (
                 // Binary variables are converted to a non-negative variable with upper bound of 1
                 Some(
-                    StdVar::new_positive()
+                    StandardVariable::new_positive()
                         .with_name(std_var_name)
                         .with_upper_bound(1.0),
                 ),
@@ -186,7 +193,7 @@ impl StandardModel {
                     // Case 1: Lower bound is 0, create non-negative variable with optional upper bound
                     (0.0, _) => (
                         Some(
-                            StdVar::new_positive()
+                            StandardVariable::new_positive()
                                 .with_name(std_var_name)
                                 .with_upper_bound(ub),
                         ),
@@ -196,21 +203,21 @@ impl StandardModel {
                     (_, 0.0) => (
                         None,
                         Some(
-                            StdVar::new_negative()
+                            StandardVariable::new_negative()
                                 .with_name(std_var_name)
                                 .with_upper_bound(-lb),
                         ),
                     ),
                     // Case 3: Unbounded variable, split into positive and negative parts
                     (f64::NEG_INFINITY, f64::INFINITY) => (
-                        Some(StdVar::new_positive().with_name(std_var_name.clone())),
-                        Some(StdVar::new_negative().with_name(std_var_name)),
+                        Some(StandardVariable::new_positive().with_name(std_var_name.clone())),
+                        Some(StandardVariable::new_negative().with_name(std_var_name)),
                     ),
                     // Case 4: Lower bound is negative infinity, create shifted negative variable
                     (f64::NEG_INFINITY, _) => (
                         None,
                         Some(
-                            StdVar::new_negative()
+                            StandardVariable::new_negative()
                                 .with_name(std_var_name)
                                 .with_shift(ub),
                         ),
@@ -218,7 +225,7 @@ impl StandardModel {
                     // Case 5: Upper bound is infinity, create shifted positive variable
                     (_, f64::INFINITY) => (
                         Some(
-                            StdVar::new_positive()
+                            StandardVariable::new_positive()
                                 .with_name(std_var_name)
                                 .with_shift(lb),
                         ),
@@ -227,7 +234,7 @@ impl StandardModel {
                     // Case 6: Bounded variable within finite range, create shifted positive variable
                     _ => (
                         Some(
-                            StdVar::new_positive()
+                            StandardVariable::new_positive()
                                 .with_name(std_var_name)
                                 .with_shift(lb)
                                 .with_upper_bound(ub - lb),
@@ -240,12 +247,17 @@ impl StandardModel {
     }
 
     /// Standardize a single constraint into standard form (ax ≤ b)
-    fn standardize_constraint(constr: &Constr, variable_map: &VariableMap) -> Vec<StdConstr> {
-        let std_constr_name = format!("FromConstr: {}", constr.name_or_default());
+    fn standardize_constraint(
+        constr: &Constraint,
+        variables: &DenseSlotMap<StandardVariableKey, StandardVariable>,
+        mapping: &VarMapping
+    ) -> Vec<StandardConstraint> {
+        let std_constr_name = format!("FromConstraint: {}", constr.name());
         // Move everything to LHS, constant to RHS
         let mut std_lhs = Self::standardize_expression(
             &(constr.lhs().clone() - constr.rhs().clone()),
-            variable_map,
+            variables,
+            mapping,
         );
         let std_rhs = -std_lhs.constant;
         std_lhs.constant = 0.0;
@@ -253,53 +265,63 @@ impl StandardModel {
         match constr.sense() {
             ConstraintSense::LessEqual => {
                 // Already in correct form
-                vec![StdConstr::new(std_lhs, std_rhs).with_name(std_constr_name)]
+                vec![StandardConstraint::new(std_lhs, std_rhs).with_name(std_constr_name)]
             }
             ConstraintSense::GreaterEqual => {
                 // Multiply by -1 to convert to ≤
-                vec![StdConstr::new(-std_lhs, -std_rhs).with_name(std_constr_name)]
+                vec![StandardConstraint::new(-std_lhs, -std_rhs).with_name(std_constr_name)]
             }
             ConstraintSense::Equal => {
                 // Split into x ≤ b and -x ≤ -b
                 vec![
-                    StdConstr::new(std_lhs.clone(), std_rhs).with_name(std_constr_name.clone()),
-                    StdConstr::new(-std_lhs, -std_rhs).with_name(std_constr_name),
+                    StandardConstraint::new(std_lhs.clone(), std_rhs).with_name(std_constr_name.clone()),
+                    StandardConstraint::new(-std_lhs, -std_rhs).with_name(std_constr_name),
                 ]
             }
         }
     }
 
     /// Standardize an objective into maximization form
-    fn standardize_objective(obj: &Objective, variable_map: &VariableMap) -> StandardObjective {
+    fn standardize_objective(
+        obj: &Objective,
+        variables: &DenseSlotMap<StandardVariableKey, StandardVariable>,
+        mapping: &VarMapping
+    ) -> StandardObjective {
         StandardObjective::from_sense(
             obj.sense(),
-            Self::standardize_expression(obj.expr(), variable_map),
+            Self::standardize_expression(obj.expr(), variables, mapping),
         )
     }
 
     /// Standardize a linear expression into standard form
     fn standardize_expression(
-        expression: &LinearExpr<Var>,
-        variable_map: &VariableMap,
-    ) -> LinearExpr<StdVar> {
+        expression: &LinearExpr<VariableKey>,
+        variables: &DenseSlotMap<StandardVariableKey, StandardVariable>,
+        mapping: &VarMapping,
+    ) -> LinearExpr<StandardVariableKey> {
         let mut new_expr = LinearExpr::new();
         let mut shift = 0.0;
 
         for (var, coefficient) in &expression.terms {
-            match variable_map.get(var).unwrap() {
+            match mapping.get(*var).unwrap() {
                 (Some(pos_var), Some(neg_var)) => {
-                    shift += coefficient * pos_var.shift() + coefficient * neg_var.shift();
+                    let pos_shift = variables.get(*pos_var).unwrap().shift();
+                    let neg_shift = variables.get(*neg_var).unwrap().shift();
+
+                    shift += coefficient * pos_shift + coefficient * neg_shift;
 
                     new_expr.add_term(pos_var.clone(), *coefficient);
                     new_expr.add_term(neg_var.clone(), -coefficient);
                 }
                 (Some(pos_var), None) => {
-                    shift += coefficient * pos_var.shift();
+                    let pos_shift = variables.get(*pos_var).unwrap().shift();
+                    shift += coefficient * pos_shift;
 
                     new_expr.add_term(pos_var.clone(), *coefficient);
                 }
                 (None, Some(neg_var)) => {
-                    shift += coefficient * neg_var.shift();
+                    let neg_shift = variables.get(*neg_var).unwrap().shift();
+                    shift += coefficient * neg_shift;
 
                     new_expr.add_term(neg_var.clone(), -coefficient);
                 }
@@ -326,15 +348,15 @@ impl fmt::Display for StandardModel {
 
         // Display the constraints
         writeln!(f, "Constraints: [")?;
-        for constr in self.constraints.iter() {
-            writeln!(f, "\t{},", constr)?;
+        for constraint in self.constraints.values() {
+            writeln!(f, "\t{},", constraint)?;
         }
         writeln!(f, "]")?;
 
         // Display the variables
         writeln!(f, "Variables: [")?;
-        for var in self.variables.iter() {
-            writeln!(f, "\t{},", var)?;
+        for variable in self.variables.values() {
+            writeln!(f, "\t{},", variable)?;
         }
         write!(f, "]")?;
 

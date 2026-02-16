@@ -1,15 +1,17 @@
-use std::{cell::RefCell, fmt, rc::Rc};
+use std::fmt;
+use slotmap::{new_key_type, DenseSlotMap};
 
 use crate::core::expression::LinearExpr;
+use crate::core::variable::VariableKey;
 
-use super::variable::Var;
+new_key_type! {
+    pub struct ConstraintKey;
+}
 
-#[derive(Debug, Clone)]
-struct Constraint {
-    name: Option<String>,
-    lhs: LinearExpr<Var>,
-    sense: ConstraintSense,
-    rhs: LinearExpr<Var>,
+impl fmt::Display for ConstraintKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ConstraintKey({:?})", self.0)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -20,60 +22,43 @@ pub enum ConstraintSense {
 }
 
 #[derive(Debug, Clone)]
-pub struct Constr(Rc<RefCell<Constraint>>);
+pub struct Constraint {
+    name: Option<String>,
+    lhs: LinearExpr<VariableKey>,
+    sense: ConstraintSense,
+    rhs: LinearExpr<VariableKey>,
+}
 
-impl Constr {
-    pub fn new(
-        lhs: impl Into<LinearExpr<Var>>,
-        sense: ConstraintSense,
-        rhs: impl Into<LinearExpr<Var>>,
-    ) -> Self {
-        Self(Rc::new(RefCell::new(Constraint {
-            name: None,
-            lhs: lhs.into(),
-            sense,
-            rhs: rhs.into(),
-        })))
+// Public Getters for Read-Only Access
+impl Constraint {
+    /// Returns the name of the constraint, if it's empty return memory address.
+    pub fn name(&self) -> String {
+        if let Some(name) = &self.name {
+            name.clone()
+        } else {
+            "<unnamed>".to_string()
+        }
     }
 
-    pub fn with_name(self, name: impl Into<String>) -> Self {
-        self.0.borrow_mut().name = Some(name.into());
-        self
+    /// Returns the Left Hand Side expression.
+    pub fn lhs(&self) -> &LinearExpr<VariableKey> {
+        &self.lhs
     }
 
-    pub fn name(&self) -> Option<String> {
-        self.0.borrow().name.clone()
+    /// Returns the Right Hand Side expression.
+    pub fn rhs(&self) -> &LinearExpr<VariableKey> {
+        &self.rhs
     }
 
-    pub fn name_or_default(&self) -> String {
-        self.0
-            .borrow()
-            .name
-            .clone()
-            .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
-    }
-
+    /// Returns the comparison sense (<=, >=, =).
     pub fn sense(&self) -> ConstraintSense {
-        self.0.borrow().sense.clone()
-    }
-
-    pub fn lhs(&self) -> LinearExpr<Var> {
-        self.0.borrow().lhs.clone()
-    }
-
-    pub fn rhs(&self) -> LinearExpr<Var> {
-        self.0.borrow().rhs.clone()
+        self.sense
     }
 }
 
-impl fmt::Display for Constr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let name_display = match self.name() {
-            Some(name) => name.clone(),
-            None => self.name_or_default(),
-        };
-
-        let sense = match self.sense() {
+impl fmt::Display for Constraint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let sense_str = match self.sense {
             ConstraintSense::LessEqual => "<=",
             ConstraintSense::GreaterEqual => ">=",
             ConstraintSense::Equal => "=",
@@ -81,11 +66,81 @@ impl fmt::Display for Constr {
 
         write!(
             f,
-            "Constr({}): {} {} {}",
-            name_display,
-            self.lhs(),
-            sense,
-            self.rhs(),
+            "Constraint({}: {} {} {})",
+            self.name(),
+            self.lhs,
+            sense_str,
+            self.rhs
         )
+    }
+}
+
+// --- Constraint Builder ---
+
+/// A builder for creating and configuring a new constraint.
+pub struct ConstraintBuilder<'a> {
+    arena: &'a mut DenseSlotMap<ConstraintKey, Constraint>,
+    lhs: LinearExpr<VariableKey>,
+    name: String,
+}
+
+impl<'a> ConstraintBuilder<'a> {
+    pub(crate) fn new(
+        arena: &'a mut DenseSlotMap<ConstraintKey, Constraint>,
+        lhs: LinearExpr<VariableKey>,
+    ) -> Self {
+        Self {
+            arena,
+            lhs,
+            name: String::new(),
+        }
+    }
+
+    /// Sets the name of the constraint.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    // --- Terminating Methods ---
+
+    /// Creates a Less Than or Equal constraint: `LHS <= RHS`.
+    pub fn less_than_or_equal(self, rhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintKey {
+        self.finish(ConstraintSense::LessEqual, rhs.into())
+    }
+
+    /// Alias for `less_than_or_equal`.
+    pub fn le(self, rhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintKey {
+        self.less_than_or_equal(rhs)
+    }
+
+    /// Creates a Greater Than or Equal constraint: `LHS >= RHS`.
+    pub fn greater_than_or_equal(self, rhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintKey {
+        self.finish(ConstraintSense::GreaterEqual, rhs.into())
+    }
+
+    /// Alias for `greater_than_or_equal`.
+    pub fn ge(self, rhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintKey {
+        self.greater_than_or_equal(rhs)
+    }
+
+    /// Creates an Equality constraint: `LHS == RHS`.
+    pub fn equal_to(self, rhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintKey {
+        self.finish(ConstraintSense::Equal, rhs.into())
+    }
+
+    /// Alias for `equal_to`.
+    pub fn eq(self, rhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintKey {
+        self.equal_to(rhs)
+    }
+
+    fn finish(self, sense: ConstraintSense, rhs: LinearExpr<VariableKey>) -> ConstraintKey {
+        let data = Constraint {
+            name: Some(self.name),
+            lhs: self.lhs,
+            sense,
+            rhs,
+        };
+        self.arena.insert(data)
     }
 }

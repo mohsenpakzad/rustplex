@@ -1,25 +1,24 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
+use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
     core::{
-        constraint::{Constr, ConstraintSense},
+        constraint::{ConstraintKey, Constraint, ConstraintBuilder},
         expression::LinearExpr,
         objective::{Objective, ObjectiveSense},
-        variable::Var,
+        variable::{VariableKey, Variable, VariableType, VariableBuilder},
     },
     error::SolverError,
     simplex::{config::SolverConfig, solution::SolverSolution, status::SolverStatus},
     standardization::standard_model::StandardModel,
 };
 
-use super::variable::VariableType;
-
 #[derive(Debug, Default)]
 pub struct Model {
-    variables: Vec<Var>,
-    constraints: Vec<Constr>,
+    variables: DenseSlotMap<VariableKey, Variable>,
+    constraints: DenseSlotMap<ConstraintKey, Constraint>,
     objective: Option<Objective>,
-    solution: SolverSolution<Var>,
+    solution: SolverSolution<VariableKey>,
     config: Option<SolverConfig>,
 }
 
@@ -33,32 +32,23 @@ impl Model {
         self
     }
 
-    pub fn add_variable(&mut self) -> Var {
-        let var = Var::new();
-        self.variables.push(var.clone());
-        var
+    pub fn add_variable(&mut self) -> VariableBuilder<'_> {
+        VariableBuilder::new(&mut self.variables)
     }
 
-    pub fn add_constraint(
-        &mut self,
-        lhs: impl Into<LinearExpr<Var>>,
-        sense: ConstraintSense,
-        rhs: impl Into<LinearExpr<Var>>,
-    ) -> Constr {
-        let constr = Constr::new(lhs.into(), sense, rhs.into());
-        self.constraints.push(constr.clone());
-        constr
+    pub fn add_constraint(&mut self, lhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintBuilder<'_> {
+        ConstraintBuilder::new(&mut self.constraints, lhs.into())
     }
 
-    pub fn set_objective(&mut self, sense: ObjectiveSense, expression: impl Into<LinearExpr<Var>>) {
+    pub fn set_objective(&mut self, sense: ObjectiveSense, expression: impl Into<LinearExpr<VariableKey>>) {
         self.objective = Some(Objective::new(sense, expression.into()));
     }
 
-    pub fn is_lp(&self) -> bool {
+    fn is_lp(&self) -> bool {
         !self
             .variables
-            .iter()
-            .any(|var| !matches!(var.var_type(), VariableType::Continuous))
+            .values()
+            .any(|variable| !matches!(variable.var_type(), VariableType::Continuous))
     }
 
     pub fn to_standard(&self) -> StandardModel {
@@ -89,7 +79,7 @@ impl Model {
     fn construct_solution_from_standard_model(
         &self,
         std_model: &StandardModel,
-    ) -> SolverSolution<Var> {
+    ) -> SolverSolution<VariableKey> {
         let std_solution = std_model.solution();
 
         if matches!(std_solution.status(), SolverStatus::Infeasible) {
@@ -101,10 +91,10 @@ impl Model {
 
         // 1. Map values back to original variables
         // We iterate over the original variables in the model and query the standard model for their values.
-        let variable_values: HashMap<Var, f64> = self
+        let variable_values: SecondaryMap<VariableKey, f64> = self
             .variables
-            .iter()
-            .map(|var| (var.clone(), std_model.get_variable_value(var).unwrap())) // Added unwrap_or(0.0)
+            .keys()
+            .map(|var_key| (var_key, std_model.get_variable_value(var_key).unwrap())) // Added unwrap_or(0.0)
             .collect();
 
         // 2. Handle Objective Value and Sign
@@ -127,11 +117,11 @@ impl Model {
         )
     }
 
-    pub fn variables(&self) -> &Vec<Var> {
+    pub fn variables(&self) -> &DenseSlotMap<VariableKey, Variable> {
         &self.variables
     }
 
-    pub fn constraints(&self) -> &Vec<Constr> {
+    pub fn constraints(&self) -> &DenseSlotMap<ConstraintKey, Constraint> {
         &self.constraints
     }
 
@@ -139,7 +129,7 @@ impl Model {
         &self.objective
     }
 
-    pub fn solution(&self) -> &SolverSolution<Var> {
+    pub fn solution(&self) -> &SolverSolution<VariableKey> {
         &self.solution
     }
 }
@@ -158,15 +148,15 @@ impl fmt::Display for Model {
 
         // Display the constraints
         writeln!(f, "Constraints: [")?;
-        for constr in self.constraints.iter() {
-            writeln!(f, "\t{},", constr)?;
+        for constraint in self.constraints.values() {
+            writeln!(f, "\t{},", constraint)?;
         }
         writeln!(f, "]")?;
 
         // Display the variables
         writeln!(f, "Variables: [")?;
-        for var in self.variables.iter() {
-            writeln!(f, "\t{},", var)?;
+        for variable in self.variables.values() {
+            writeln!(f, "\t{},", variable)?;
         }
         write!(f, "]")?;
 

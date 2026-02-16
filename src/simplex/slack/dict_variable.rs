@@ -1,74 +1,53 @@
-use std::{
-    fmt,
-    hash::{Hash, Hasher},
-    rc::Rc,
-};
+use std::fmt;
+use slotmap::new_key_type;
 
 use crate::{
-    core::expression::{impl_expr_display, impl_expr_ops, ExprVariable},
-    standardization::standard_variable::StdVar,
+    core::expression::{ExprVariable, impl_expr_display, impl_expr_ops},
+    standardization::standard_variable::StandardVariableKey,
 };
+
+new_key_type! {
+    pub struct DictVariableKey;
+}
+
+impl fmt::Display for DictVariableKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DictVariableKey({:?})", self.0)
+    }
+}
+
+impl ExprVariable for DictVariableKey {}
+
+impl_expr_display!(DictVariableKey);
+impl_expr_ops!(DictVariableKey, [f64]);
 
 #[derive(Debug, Clone)]
 pub enum DictVariable {
-    NonSlack(StdVar),
+    NonSlack(StandardVariableKey),
     Slack(usize),
+    Auxiliary,
 }
 
-#[derive(Debug, Clone)]
-pub struct DictVar(Rc<DictVariable>);
-
-impl DictVar {
-    pub fn new_non_slack(var: StdVar) -> Self {
-        DictVar(Rc::new(DictVariable::NonSlack(var)))
+impl DictVariable {
+    pub fn new_non_slack(var: StandardVariableKey) -> Self {
+        DictVariable::NonSlack(var)
     }
 
-    pub fn new_slack(idx: usize) -> Self {
-        DictVar(Rc::new(DictVariable::Slack(idx)))
+    pub fn new_slack(index: usize) -> Self {
+        DictVariable::Slack(index)
     }
 
-    pub fn var(&self) -> &DictVariable {
-        &self.0
-    }
-}
-
-impl PartialEq for DictVar {
-    fn eq(&self, other: &Self) -> bool {
-        match (self.var(), other.var()) {
-            (DictVariable::NonSlack(a), DictVariable::NonSlack(b)) => a == b,
-            (DictVariable::Slack(a), DictVariable::Slack(b)) => a == b,
-            _ => false,
-        }
+    pub fn new_auxiliary() -> Self {
+        DictVariable::Auxiliary
     }
 }
 
-impl Eq for DictVar {}
-
-impl Hash for DictVar {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self.var() {
-            DictVariable::NonSlack(var) => {
-                0.hash(state); // Discriminant for NonSlack variant
-                var.hash(state);
-            }
-            DictVariable::Slack(idx) => {
-                1.hash(state); // Discriminant for Slack variant
-                idx.hash(state);
-            }
-        }
-    }
-}
-
-impl fmt::Display for DictVar {
+impl fmt::Display for DictVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.var() {
+        match self {
             DictVariable::NonSlack(var) => write!(f, "DictVar({})", var),
-            DictVariable::Slack(idx) => write!(f, "DictVar(Slack_{})", idx),
+            DictVariable::Slack(index) => write!(f, "DictVar(Slack_{})", index),
+            DictVariable::Auxiliary => write!(f, "DictVar(Aux)"),
         }
     }
 }
-
-impl ExprVariable for DictVar {}
-
-impl_expr_display!(DictVar);
-impl_expr_ops!(DictVar, [f64]);

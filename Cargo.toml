@@ -10,4 +10,5 @@ repository = "https://github.com/mohsenpakzad/rustplex"
 readme = "README.md"
 
 [dependencies]
+slotmap = "1.1.1"
 thiserror = "2.0.17"

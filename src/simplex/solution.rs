@@ -1,21 +1,22 @@
-use std::{collections::HashMap, fmt, time};
+use std::{fmt, time};
+use slotmap::{SecondaryMap, Key};
 
 use super::status::SolverStatus;
 
 #[derive(Debug, Clone)]
-pub struct SolverSolution<V> {
+pub struct SolverSolution<V: Key> {
     status: SolverStatus,
     objective_value: Option<f64>,
-    variable_values: Option<HashMap<V, f64>>,
+    variable_values: Option<SecondaryMap<V, f64>>,
     iterations: u32,
     solve_time: time::Duration,
 }
 
-impl<V> SolverSolution<V> {
+impl<V: Key> SolverSolution<V> {
     pub fn new(
         status: SolverStatus,
         objective_value: f64,
-        variable_values: HashMap<V, f64>,
+        variable_values: SecondaryMap<V, f64>,
         iterations: u32,
         solve_time: time::Duration,
     ) -> Self {
@@ -46,7 +47,7 @@ impl<V> SolverSolution<V> {
         &self.objective_value
     }
 
-    pub fn variable_values(&self) -> &Option<HashMap<V, f64>> {
+    pub fn variable_values(&self) -> &Option<SecondaryMap<V, f64>> {
         &self.variable_values
     }
 
@@ -59,7 +60,7 @@ impl<V> SolverSolution<V> {
     }
 }
 
-impl<V> Default for SolverSolution<V> {
+impl<V: Key> Default for SolverSolution<V> {
     fn default() -> Self {
         Self {
             status: SolverStatus::NotSolved,
@@ -71,7 +72,7 @@ impl<V> Default for SolverSolution<V> {
     }
 }
 
-impl<V: fmt::Display + Eq + std::hash::Hash> fmt::Display for SolverSolution<V> {
+impl<V: fmt::Display + Key> fmt::Display for SolverSolution<V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Solver Status: {:?}", self.status)?;
         if self.status.is_optimal() {

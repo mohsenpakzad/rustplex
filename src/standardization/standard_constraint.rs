@@ -1,72 +1,116 @@
-use crate::core::expression::LinearExpr;
-use std::{cell::RefCell, fmt, rc::Rc};
+use std::fmt;
+use slotmap::{new_key_type, DenseSlotMap};
 
-use super::standard_variable::StdVar;
+use crate::core::expression::LinearExpr;
+use crate::standardization::standard_variable::StandardVariableKey;
+
+new_key_type! {
+    pub struct StandardConstraintKey;
+}
+
+impl fmt::Display for StandardConstraintKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "StandardConstraintKey({:?})", self.0)
+    }
+}
 
 #[derive(Debug)]
-struct StandardConstraint {
+pub struct StandardConstraint {
     name: Option<String>,
-    lhs: LinearExpr<StdVar>,
+    lhs: LinearExpr<StandardVariableKey>,
     rhs: f64,
 }
 
-#[derive(Debug)]
-pub struct StdConstr(Rc<RefCell<StandardConstraint>>);
-
-impl StdConstr {
-    pub fn new(lhs: impl Into<LinearExpr<StdVar>>, rhs: f64) -> Self {
-        Self(Rc::new(RefCell::new(StandardConstraint {
+// Public Getters for Read-Only Access
+impl StandardConstraint {
+    pub fn new(lhs: impl Into<LinearExpr<StandardVariableKey>>, rhs: f64) -> Self {
+        Self {
             name: None,
             lhs: lhs.into(),
             rhs,
-        })))
+        }
     }
 
-    pub fn with_name(self, name: impl Into<String>) -> Self {
-        self.0.borrow_mut().name = Some(name.into());
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
         self
     }
 
-    pub fn name(&self) -> Option<String> {
-        self.0.borrow().name.clone()
+    /// Returns the name of the constraint, if it's empty return memory address.
+    pub fn name(&self) -> String {
+         if let Some(name) = &self.name {
+            name.clone()
+        } else {
+            "<unnamed>".to_string()
+        }
     }
 
-    pub fn name_or_default(&self) -> String {
-        self.0
-            .borrow()
-            .name
-            .clone()
-            .unwrap_or(format!("{:p}", Rc::as_ptr(&self.0)))
+    /// Returns the Left Hand Side expression.
+    pub fn lhs(&self) -> &LinearExpr<StandardVariableKey> {
+        &self.lhs
     }
 
-    pub fn lhs(&self) -> LinearExpr<StdVar> {
-        self.0.borrow().lhs.clone()
-    }
-
+    /// Returns the Right Hand Side constant.
     pub fn rhs(&self) -> f64 {
-        self.0.borrow().rhs
+        self.rhs
     }
 }
 
-impl Clone for StdConstr {
-    fn clone(&self) -> Self {
-        StdConstr(Rc::clone(&self.0))
-    }
-}
-
-impl fmt::Display for StdConstr {
+impl fmt::Display for StandardConstraint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name_display = match self.name() {
-            Some(name) => name.clone(),
-            None => self.name_or_default(),
-        };
-
         write!(
             f,
-            "StdConstr({}): {} <= {}",
-            name_display,
-            self.lhs(),
-            self.rhs()
+            "StandardConstraint({}: {} <= {})",
+            self.name(),
+            self.lhs,
+            self.rhs
         )
+    }
+}
+
+// --- Standard Constraint Builder ---
+
+/// A builder for creating and configuring a new standard constraint.
+pub struct StandardConstraintBuilder<'a> {
+    arena: &'a mut DenseSlotMap<StandardConstraintKey, StandardConstraint>,
+    lhs: LinearExpr<StandardVariableKey>,
+    name: String,
+}
+
+impl<'a> StandardConstraintBuilder<'a> {
+    pub(crate) fn new(
+        arena: &'a mut DenseSlotMap<StandardConstraintKey, StandardConstraint>, 
+        lhs: LinearExpr<StandardVariableKey>
+    ) -> Self {
+        Self {
+            arena,
+            lhs,
+            name: String::new(),
+        }
+    }
+
+    /// Sets the name of the constraint.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    // --- Terminating Methods ---
+
+    /// Creates a Less Than or Equal constraint: `LHS <= RHS`.
+    ///
+    /// This is the only allowed relation in the Standard Model.
+    pub fn less_than_or_equal(self, rhs: f64) -> StandardConstraintKey {
+        let data = StandardConstraint {
+            name: Some(self.name),
+            lhs: self.lhs,
+            rhs,
+        };
+        self.arena.insert(data)
+    }
+
+    /// Alias for `less_than_or_equal`.
+    pub fn le(self, rhs: f64) -> StandardConstraintKey {
+        self.less_than_or_equal(rhs)
     }
 }
