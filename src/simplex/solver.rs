@@ -13,7 +13,7 @@ use crate::{
             dict_variable::{DictVariableKey, DictVariable},
             dictionary::SlackDictionary,
         },
-        config::SolverConfig,
+        config::SolverConfiguration,
         solution::SolverSolution,
         status::SolverStatus,
     }
@@ -22,13 +22,13 @@ use crate::{
 pub struct SimplexSolver {
     slack_dict: SlackDictionary,
     iteration_count: u32,
-    config: SolverConfig,
+    config: SolverConfiguration,
 }
 
 impl SimplexSolver {
     pub fn form_standard_model(
         standard_model: &StandardModel,
-        config: SolverConfig,
+        config: SolverConfiguration,
     ) -> Result<Self, SolverError> {
         if standard_model.variables().is_empty() {
             return Err(SolverError::NoVariables);
@@ -54,7 +54,7 @@ impl SimplexSolver {
 
             // Phase1 is guaranteed that has a optimal solution,
             // so no check is needed
-            if self.slack_dict.objective_value().abs() < *self.config.tolerance() {
+            if self.slack_dict.objective_value().abs() < self.config.tolerance {
                 self.prepare_phase_two(aux_var_key, original_objective);
             } else {
                 return SolverSolution::new_infeasible(self.iteration_count, start_time.elapsed());
@@ -74,7 +74,7 @@ impl SimplexSolver {
         self.slack_dict
             .entries()
             .values()
-            .any(|entry| entry.value() < self.config.neg_tolerance())
+            .any(|entry| entry.value() < -self.config.tolerance)
     }
 
     fn create_auxiliary_problem(&mut self) -> (DictVariableKey, LinearExpr<DictVariableKey>) {
@@ -105,7 +105,7 @@ impl SimplexSolver {
                 .expr()
                 .terms
                 .iter()
-                .find(|&(_, coeff)| coeff.abs() > *self.config.tolerance())
+                .find(|&(_, coeff)| coeff.abs() > self.config.tolerance)
                 .map(|(var, _)| var.clone());
 
             if let Some(entering) = pivot_candidate {
@@ -139,8 +139,8 @@ impl SimplexSolver {
     }
 
     fn solve(&mut self) -> SolverStatus {
-        let max_iterations = self.config.max_iterations();
-        while self.iteration_count < *max_iterations {
+        let max_iterations = self.config.max_iterations;
+        while self.iteration_count < max_iterations {
             self.iteration_count += 1;
             match self.find_entering_variable() {
                 None => return SolverStatus::Optimal,
@@ -160,7 +160,7 @@ impl SimplexSolver {
             .objective()
             .terms
             .iter()
-            .filter(|&(_, coefficient)| *coefficient > *self.config.tolerance())
+            .filter(|&(_, coefficient)| *coefficient > self.config.tolerance)
             .max_by(|(v1, c1), (v2, c2)| {
                 c1.total_cmp(c2) // Compare coefficients first
                     .then_with(|| self.compare_variables(v1, v2)) // Break ties by variable type
@@ -174,7 +174,7 @@ impl SimplexSolver {
             .iter()
             .filter_map(|(entry_key, entry)| {
                 let coefficient = entry.non_basic_coefficient(entering);
-                if coefficient < self.config.neg_tolerance() {
+                if coefficient < -self.config.tolerance {
                     Some((entry_key, entry, entry.value() / coefficient))
                 } else {
                     None

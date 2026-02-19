@@ -9,28 +9,53 @@ use crate::{
         variable::{VariableKey, Variable, VariableType, VariableBuilder},
     },
     error::SolverError,
-    simplex::{config::SolverConfig, solution::SolverSolution, status::SolverStatus},
+    simplex::{config::SolverConfiguration, solution::SolverSolution, status::SolverStatus},
     standardization::standard_model::StandardModel,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Model {
     variables: DenseSlotMap<VariableKey, Variable>,
     constraints: DenseSlotMap<ConstraintKey, Constraint>,
     objective: Option<Objective>,
     solution: SolverSolution<VariableKey>,
-    config: Option<SolverConfig>,
+    config: SolverConfiguration,
 }
 
 impl Model {
+    /// Creates a new, empty model with default settings.
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            variables: DenseSlotMap::with_key(),
+            constraints: DenseSlotMap::with_key(),
+            objective: None,
+            solution: SolverSolution::default(),
+            config: SolverConfiguration::default(),
+        }
     }
 
-    pub fn with_config(mut self, config: SolverConfig) -> Self {
-        self.config = Some(config);
+    // --- Configuration Methods ---
+
+    pub fn with_config(mut self, config: SolverConfiguration) -> Self {
+        self.config = config;
         self
     }
+
+    /// Sets the maximum number of iterations for the solver.
+    ///
+    /// Default is 10,000.
+    pub fn set_max_iterations(&mut self, max_iterations: u32) {
+        self.config.max_iterations = max_iterations;
+    }
+
+    /// Sets the numerical tolerance (epsilon) for the solver.
+    ///
+    /// Default is 1e-10. Values smaller than this are treated as zero.
+    pub fn set_tolerance(&mut self, tolerance: f64) {
+        self.config.tolerance = tolerance;
+    }
+
+    // --- Builder Methods ---
 
     pub fn add_variable(&mut self) -> VariableBuilder<'_> {
         VariableBuilder::new(&mut self.variables)
@@ -65,7 +90,7 @@ impl Model {
         }
 
         let mut standardized_model =
-            StandardModel::from_model(&self).with_config(self.config.clone().unwrap_or_default());
+            StandardModel::from_model(&self).with_config(self.config);
 
         standardized_model.solve()?;
 
@@ -131,6 +156,10 @@ impl Model {
 
     pub fn solution(&self) -> &SolverSolution<VariableKey> {
         &self.solution
+    }
+
+    pub fn config(&self) -> &SolverConfiguration {
+        &self.config
     }
 }
 

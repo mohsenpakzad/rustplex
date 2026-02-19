@@ -10,7 +10,11 @@ use crate::{
         variable::{VariableKey, Variable, VariableType},
     },
     error::SolverError,
-    simplex::{config::SolverConfig, solution::SolverSolution, solver::SimplexSolver},
+    simplex::{
+        config::SolverConfiguration,
+        solution::SolverSolution,
+        solver::SimplexSolver
+    },
     standardization::{
         standard_constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey}, 
         standard_objective::StandardObjective,
@@ -19,21 +23,28 @@ use crate::{
 };
 
 /// A model that enforces standard form constraints
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct StandardModel {
     variables: DenseSlotMap<StandardVariableKey, StandardVariable>,
     constraints: DenseSlotMap<StandardConstraintKey, StandardConstraint>,
     objective: Option<StandardObjective>,
     mapping: Option<VarMapping>,
     solution: SolverSolution<StandardVariableKey>,
-    config: Option<SolverConfig>,
+    config: SolverConfiguration,
 }
 
 type VarMapping = SecondaryMap<VariableKey, (Option<StandardVariableKey>, Option<StandardVariableKey>)>;
 
 impl StandardModel {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            variables: DenseSlotMap::with_key(),
+            constraints: DenseSlotMap::with_key(),
+            objective: None,
+            mapping: None,
+            solution: SolverSolution::default(),
+            config: SolverConfiguration::default(),
+        }
     }
 
     pub fn from_model(model: &Model) -> Self {
@@ -85,12 +96,12 @@ impl StandardModel {
             objective: standard_objective,
             mapping: Some(mapping),
             solution: SolverSolution::default(),
-            config: None,
+            config: *model.config(),
         }
     }
 
-    pub fn with_config(mut self, config: SolverConfig) -> Self {
-        self.config = Some(config);
+    pub fn with_config(mut self, config: SolverConfiguration) -> Self {
+        self.config = config;
         self
     }
 
@@ -117,7 +128,7 @@ impl StandardModel {
         }
 
         let mut solver =
-            SimplexSolver::form_standard_model(&self, self.config.clone().unwrap_or_default())?;
+            SimplexSolver::form_standard_model(&self, self.config)?;
         self.solution = solver.start();
         Ok(())
     }
