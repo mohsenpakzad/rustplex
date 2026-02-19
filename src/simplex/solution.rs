@@ -3,6 +3,7 @@ use slotmap::{SecondaryMap, Key};
 
 use super::status::SolverStatus;
 
+/// The result of a solved optimization model.
 #[derive(Debug, Clone)]
 pub struct SolverSolution<V: Key> {
     status: SolverStatus,
@@ -39,10 +40,14 @@ impl<V: Key> SolverSolution<V> {
         }
     }
 
+    /// Returns the final status of the solver (e.g., Optimal, Infeasible).
     pub fn status(&self) -> &SolverStatus {
         &self.status
     }
 
+    /// Returns the final objective value.
+    ///
+    /// If the status is not Optimal, this value might be meaningless (e.g., infinity).
     pub fn objective_value(&self) -> &Option<f64> {
         &self.objective_value
     }
@@ -51,10 +56,12 @@ impl<V: Key> SolverSolution<V> {
         &self.variable_values
     }
 
+    /// Returns the number of simplex iterations performed.
     pub fn iterations(&self) -> &u32 {
         &self.iterations
     }
 
+    /// Returns the time taken to solve the problem.
     pub fn solve_time(&self) -> &std::time::Duration {
         &self.solve_time
     }
