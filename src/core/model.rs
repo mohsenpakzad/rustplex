@@ -86,8 +86,6 @@ impl Model {
         // 1. Compile the domain model into a standard model
         let (standardizer, mut standardized_model) = Standardizer::compile(&self);
 
-        println!("MODEL: {}", standardized_model);
-
         // 2. Solve the math
         let std_solution = standardized_model.solve()?;
 
