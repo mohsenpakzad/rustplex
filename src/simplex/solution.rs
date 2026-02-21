@@ -67,18 +67,6 @@ impl<V: Key> SolverSolution<V> {
     }
 }
 
-impl<V: Key> Default for SolverSolution<V> {
-    fn default() -> Self {
-        Self {
-            status: SolverStatus::NotSolved,
-            objective_value: None,
-            variable_values: None,
-            iterations: 0,
-            solve_time: time::Duration::ZERO,
-        }
-    }
-}
-
 impl<V: fmt::Display + Key> fmt::Display for SolverSolution<V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Solver Status: {:?}", self.status)?;

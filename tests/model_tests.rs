@@ -34,11 +34,11 @@ fn test_maximization_standard() {
     model.add_constraint(3.0 * x - y).le(0.0);
     model.add_constraint(x - y).le(2.0);
 
-    assert!(model.solve().is_ok());
+    let result = model.solve();
+    assert!(result.is_ok());
 
-    let solution = model.solution();
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
-
     assert_approx_eq(solution.objective_value().unwrap(), 30.0);
 
     let vars = solution.variable_values().as_ref().unwrap();
@@ -77,9 +77,10 @@ fn test_minimization_standard() {
     model.add_constraint(x).le(8.0);
     model.add_constraint(y).le(12.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 22.0);
 }
@@ -107,9 +108,10 @@ fn test_infeasible_problem() {
     model.add_constraint(x).ge(5.0);
     model.add_constraint(x).le(3.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Infeasible));
     assert!(solution.objective_value().is_none());
 }
@@ -135,9 +137,10 @@ fn test_unbounded_problem() {
 
     model.add_constraint(x).ge(5.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Unbounded));
 }
 
@@ -168,9 +171,10 @@ fn test_equality_constraint() {
 
     model.add_constraint(2.0 * x + y).eq(10.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 10.0);
 }
@@ -194,9 +198,10 @@ fn test_boxed_variables() {
 
     model.set_objective(Maximize, x);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 5.0);
 }
@@ -222,9 +227,10 @@ fn test_negative_variables() {
     model.set_objective(Minimize, x);
     model.add_constraint(x).le(10.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), -5.0);
 }
@@ -255,9 +261,10 @@ fn test_redundant_constraints() {
     model.add_constraint(x1 + x2).le(10.0);
     model.add_constraint(x1 + x2).le(12.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 10.0);
 }
@@ -328,9 +335,10 @@ fn test_complex_degeneracy_case() {
     model.add_constraint(x2 + x3 + x4).eq(4.0);
     model.add_constraint(x0 + x1 + x3).eq(7.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 10.0);
 }
@@ -348,15 +356,21 @@ fn test_incremental_solving() {
     model.add_constraint(x).le(10.0);
 
     // First Run
-    assert!(model.solve().is_ok());
-    assert_approx_eq(model.solution().objective_value().unwrap(), 10.0);
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert_approx_eq(solution.objective_value().unwrap(), 10.0);
 
     // Modify Model
     model.add_constraint(x).le(5.0);
 
     // Second Run
-    assert!(model.solve().is_ok());
-    assert_approx_eq(model.solution().objective_value().unwrap(), 5.0);
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert_approx_eq(solution.objective_value().unwrap(), 5.0);
 }
 
 /// Test: Mixing large and small coefficients
@@ -375,10 +389,12 @@ fn test_numerical_stability() {
     model.add_constraint(x).le(1.0);
     model.add_constraint(y).le(1_000_000.0);
 
-    assert!(model.solve().is_ok());
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     // Expected: 1,000,000 * 1 + 0.000001 * 1,000,000 = 1,000,000 + 1 = 1,000,001
-    assert_approx_eq(model.solution().objective_value().unwrap(), 1_000_001.0);
+    assert_approx_eq(solution.objective_value().unwrap(), 1_000_001.0);
 }
 
 /// Test: Zero Objective
@@ -392,9 +408,12 @@ fn test_zero_objective() {
     model.set_objective(Maximize, 0.0 * x);
     model.add_constraint(x).le(5.0);
 
-    assert!(model.solve().is_ok());
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
     // Objective value should be strictly 0.0
-    assert_approx_eq(model.solution().objective_value().unwrap(), 0.0);
+    assert_approx_eq(solution.objective_value().unwrap(), 0.0);
 }
 
 /// Test: Variables not involved in Objective
@@ -410,8 +429,11 @@ fn test_unused_variable_in_objective() {
     model.set_objective(Maximize, x); // y is ignored here
     model.add_constraint(x + y).le(10.0);
 
-    assert!(model.solve().is_ok());
-    assert_approx_eq(model.solution().objective_value().unwrap(), 10.0);
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert_approx_eq(solution.objective_value().unwrap(), 10.0);
 }
 
 /// Test: N-dimensional Hypercube
@@ -442,13 +464,16 @@ fn test_scale_hypercube_50_vars() {
     model.set_objective(Maximize, objective);
 
     let start = std::time::Instant::now();
-    assert!(model.solve().is_ok());
+    let result = model.solve();
     let duration = start.elapsed();
 
     println!("Solved 50 vars in {:?}", duration);
 
-    assert!(matches!(model.solution().status(), SolverStatus::Optimal));
-    assert_approx_eq(model.solution().objective_value().unwrap(), 50.0);
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert!(matches!(solution.status(), SolverStatus::Optimal));
+    assert_approx_eq(solution.objective_value().unwrap(), 50.0);
 }
 
 /// Test: Model with variables but NO constraints (Unbounded)
@@ -460,8 +485,11 @@ fn test_no_constraints_unbounded() {
 
     model.set_objective(Maximize, x);
 
-    assert!(model.solve().is_ok());
-    assert!(matches!(model.solution().status(), SolverStatus::Unbounded));
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert!(matches!(solution.status(), SolverStatus::Unbounded));
 }
 
 /// Test: Model with variables but NO constraints (Optimal)
@@ -473,9 +501,12 @@ fn test_no_constraints_optimal() {
 
     model.set_objective(Minimize, x);
 
-    assert!(model.solve().is_ok());
-    assert!(matches!(model.solution().status(), SolverStatus::Optimal));
-    assert_approx_eq(model.solution().objective_value().unwrap(), 0.0);
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert!(matches!(solution.status(), SolverStatus::Optimal));
+    assert_approx_eq(solution.objective_value().unwrap(), 0.0);
 }
 
 /// Test: Klee-Minty Cube (Dimension 3)
@@ -507,9 +538,10 @@ fn test_klee_minty_3d() {
     model.add_constraint(20.0 * x1 + x2).le(100.0);
     model.add_constraint(200.0 * x1 + 20.0 * x2 + x3).le(10000.0);
 
-    assert!(model.solve().is_ok());
-    let solution = model.solution();
+    let result = model.solve();
+    assert!(result.is_ok());
 
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 10000.0);
 
@@ -558,6 +590,9 @@ fn test_fractional_coefficients() {
     // Corner 3: x=0, y=0
     model.add_constraint(3.0 * x + y).le(1.0);
 
-    assert!(model.solve().is_ok());
-    assert_approx_eq(model.solution().objective_value().unwrap(), 1.0);
+    let result = model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
+    assert_approx_eq(solution.objective_value().unwrap(), 1.0);
 }

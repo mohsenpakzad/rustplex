@@ -3,9 +3,6 @@ use std::fmt;
 /// Represents the terminal state of the solver execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SolverStatus {
-    /// The solver has not started the solving process yet,
-    /// or no attempt has been made to compute a solution.
-    NotSolved,
     /// A solution satisfying all constraints and optimizing the objective was found.
     Optimal,
     /// No solution satisfies all constraints.
@@ -26,7 +23,6 @@ impl SolverStatus {
     /// Returns a human-readable description of the status.
     pub fn description(&self) -> &'static str {
         match self {
-            Self::NotSolved => "Problem has not been solved",
             Self::Optimal => "Optimal solution found",
             Self::Infeasible => "Problem is infeasible",
             Self::Unbounded => "Problem is unbounded",

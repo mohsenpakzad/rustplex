@@ -18,7 +18,6 @@ pub struct Model {
     variables: DenseSlotMap<VariableKey, Variable>,
     constraints: DenseSlotMap<ConstraintKey, Constraint>,
     objective: Option<Objective>,
-    solution: SolverSolution<VariableKey>,
     config: SolverConfiguration,
 }
 
@@ -29,7 +28,6 @@ impl Model {
             variables: DenseSlotMap::with_key(),
             constraints: DenseSlotMap::with_key(),
             objective: None,
-            solution: SolverSolution::default(),
             config: SolverConfiguration::default(),
         }
     }
@@ -76,7 +74,7 @@ impl Model {
             .any(|variable| !matches!(variable.var_type(), VariableType::Continuous))
     }
 
-    pub fn solve(&mut self) -> Result<(), SolverError> {
+    pub fn solve(&mut self) -> Result<SolverSolution<VariableKey>, SolverError> {
         if !self.is_lp() {
             return Err(SolverError::NonLinearNotSupported);
         } else if self.variables.is_empty() {
@@ -91,12 +89,12 @@ impl Model {
         println!("MODEL: {}", standardized_model);
 
         // 2. Solve the math
-        standardized_model.solve()?;
+        let std_solution = standardized_model.solve()?;
 
         // 3. Lift the result back to the domain
-        self.solution = standardizer.reconstruct_solution(standardized_model.solution(), &self);
+        let solution = standardizer.reconstruct_solution(&std_solution, &self);
 
-        Ok(())
+        Ok(solution)
     }
 
     pub fn variables(&self) -> &DenseSlotMap<VariableKey, Variable> {
@@ -109,10 +107,6 @@ impl Model {
 
     pub fn objective(&self) -> Option<&Objective> {
         self.objective.as_ref()
-    }
-
-    pub fn solution(&self) -> &SolverSolution<VariableKey> {
-        &self.solution
     }
 
     pub fn config(&self) -> &SolverConfiguration {

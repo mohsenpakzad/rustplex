@@ -41,9 +41,10 @@ fn test_standard_model_optimal() {
     std_model.build_constraint(&x1 + 3.0 * &x2).le(15.0);
 
     // 4. Solve
-    assert!(std_model.solve().is_ok());
+    let result = std_model.solve();
+    assert!(result.is_ok());
 
-    let solution = std_model.solution();
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), 17.0);
 }
@@ -72,9 +73,10 @@ fn test_standard_model_infeasible() {
     // Constraint: x <= -5
     std_model.build_constraint(1.0 * &x).le(-5.0);
 
-    assert!(std_model.solve().is_ok());
+    let result = std_model.solve();
+    assert!(result.is_ok());
 
-    let solution = std_model.solution();
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Infeasible));
     assert!(solution.objective_value().is_none());
 }
@@ -106,7 +108,10 @@ fn test_standard_model_unbounded() {
 
     assert!(std_model.solve().is_ok());
 
-    let solution = std_model.solution();
+    let result = std_model.solve();
+    assert!(result.is_ok());
+
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Unbounded));
 }
 
@@ -139,9 +144,10 @@ fn test_standard_model_needs_phase_1() {
     // Constraint: -x <= -10 (equivalent to x >= 10)
     std_model.build_constraint(-1.0 * &x).le(-10.0);
 
-    assert!(std_model.solve().is_ok());
+    let result = std_model.solve();
+    assert!(result.is_ok());
 
-    let solution = std_model.solution();
+    let solution = result.unwrap();
     assert!(matches!(solution.status(), SolverStatus::Optimal));
     assert_approx_eq(solution.objective_value().unwrap(), -10.0);
 }

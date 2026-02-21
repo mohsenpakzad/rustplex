@@ -22,7 +22,6 @@ pub struct StandardModel {
     variables: DenseSlotMap<StandardVariableKey, StandardVariable>,
     constraints: DenseSlotMap<StandardConstraintKey, StandardConstraint>,
     objective: Option<StandardObjective>,
-    solution: SolverSolution<StandardVariableKey>,
     config: SolverConfiguration,
 }
 
@@ -32,7 +31,6 @@ impl StandardModel {
             variables: DenseSlotMap::with_key(),
             constraints: DenseSlotMap::with_key(),
             objective: None,
-            solution: SolverSolution::default(),
             config: SolverConfiguration::default(),
         }
     }
@@ -65,7 +63,7 @@ impl StandardModel {
         self.objective = Some(StandardObjective::new(expression.into()));
     }
 
-    pub fn solve(&mut self) -> Result<(), SolverError> {
+    pub fn solve(&mut self) -> Result<SolverSolution<StandardVariableKey>, SolverError> {
         if self.variables.is_empty() {
             return Err(SolverError::NoVariables);
         } else if self.objective.is_none() {
@@ -74,9 +72,9 @@ impl StandardModel {
 
         let mut solver = SimplexSolver::form_standard_model(&self, self.config)?;
 
-        self.solution = solver.start();
+        let solution = solver.start();
 
-        Ok(())
+        Ok(solution)
     }
 
     pub fn variables(&self) -> &DenseSlotMap<StandardVariableKey, StandardVariable> {
@@ -89,10 +87,6 @@ impl StandardModel {
 
     pub fn objective(&self) -> &Option<StandardObjective> {
         &self.objective
-    }
-
-    pub fn solution(&self) -> &SolverSolution<StandardVariableKey> {
-        &self.solution
     }
 }
 
