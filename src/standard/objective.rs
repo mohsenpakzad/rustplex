@@ -1,8 +1,9 @@
 use std::fmt;
 
-use crate::core::{expression::LinearExpr, objective::ObjectiveSense};
-
-use super::variable::StandardVariableKey;
+use crate::{
+    core::expression::LinearExpr,
+    standard::variable::StandardVariableKey
+};
 
 #[derive(Debug, Clone)]
 pub struct StandardObjective {
@@ -12,15 +13,6 @@ pub struct StandardObjective {
 impl StandardObjective {
     pub fn new(expression: LinearExpr<StandardVariableKey>) -> Self {
         Self { expression }
-    }
-
-    pub fn from_sense(sense: &ObjectiveSense, expression: LinearExpr<StandardVariableKey>) -> Self {
-        Self {
-            expression: match sense {
-                ObjectiveSense::Minimize => -expression,
-                ObjectiveSense::Maximize => expression,
-            },
-        }
     }
 
     pub fn expr(&self) -> &LinearExpr<StandardVariableKey> {
