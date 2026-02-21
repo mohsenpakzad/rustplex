@@ -15,10 +15,10 @@ use crate::{
         solution::SolverSolution,
         solver::SimplexSolver
     },
-    standardization::{
-        standard_constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey}, 
-        standard_objective::StandardObjective,
-        standard_variable::{StandardVariable, StandardVariableBuilder, StandardVariableKey},
+    standard::{
+        constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey}, 
+        objective::StandardObjective,
+        variable::{StandardVariable, StandardVariableBuilder, StandardVariableKey},
     }
 };
 

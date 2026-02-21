@@ -1,7 +1,7 @@
 mod common;
 
 use common::assert_approx_eq;
-use rustplex::{standardization::standard_model::StandardModel, SolverStatus};
+use rustplex::{standard::model::StandardModel, SolverStatus};
 
 /// Test 1: Basic Standard Form Problem
 ///

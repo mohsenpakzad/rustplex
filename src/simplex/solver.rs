@@ -3,9 +3,9 @@ use std::{cmp, time::Instant};
 use crate::{
     core::expression::LinearExpr,
     error::SolverError,
-    standardization::{
-        standard_model::StandardModel,
-        standard_variable::StandardVariableKey
+    standard::{
+        model::StandardModel,
+        variable::StandardVariableKey
     },
     simplex::{
         slack::{

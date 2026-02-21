@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::core::{expression::LinearExpr, objective::ObjectiveSense};
 
-use super::standard_variable::StandardVariableKey;
+use super::variable::StandardVariableKey;
 
 #[derive(Debug, Clone)]
 pub struct StandardObjective {

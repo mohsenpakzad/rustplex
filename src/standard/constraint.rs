@@ -2,7 +2,7 @@ use std::fmt;
 use slotmap::{new_key_type, DenseSlotMap};
 
 use crate::core::expression::LinearExpr;
-use crate::standardization::standard_variable::StandardVariableKey;
+use crate::standard::variable::StandardVariableKey;
 
 new_key_type! {
     pub struct StandardConstraintKey;

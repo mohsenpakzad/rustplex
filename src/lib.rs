@@ -1,7 +1,7 @@
 pub mod core;
 pub mod error;
 pub mod simplex;
-pub mod standardization;
+pub mod standard;
 
 pub use crate::core::constraint::{ConstraintKey, ConstraintSense};
 pub use crate::core::model::Model;

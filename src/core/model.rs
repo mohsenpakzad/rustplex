@@ -10,7 +10,7 @@ use crate::{
     },
     error::SolverError,
     simplex::{config::SolverConfiguration, solution::SolverSolution, status::SolverStatus},
-    standardization::standard_model::StandardModel,
+    standard::model::StandardModel,
 };
 
 #[derive(Debug)]

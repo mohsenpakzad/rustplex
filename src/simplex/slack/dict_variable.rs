@@ -3,7 +3,7 @@ use slotmap::new_key_type;
 
 use crate::{
     core::expression::{ExprVariable, impl_expr_display, impl_expr_ops},
-    standardization::standard_variable::StandardVariableKey,
+    standard::variable::StandardVariableKey,
 };
 
 new_key_type! {

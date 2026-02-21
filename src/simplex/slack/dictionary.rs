@@ -3,7 +3,7 @@ use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
     core::expression::LinearExpr, 
-    standardization::{standard_model::StandardModel, standard_variable::StandardVariableKey},
+    standard::{model::StandardModel, variable::StandardVariableKey},
     simplex::slack::{
         dict_entry::{DictEntry, DictEntryKey},
         dict_variable::{DictVariableKey, DictVariable}
