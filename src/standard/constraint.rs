@@ -37,12 +37,8 @@ impl StandardConstraint {
     }
 
     /// Returns the name of the constraint.
-    pub fn name(&self) -> String {
-         if let Some(name) = &self.name {
-            name.clone()
-        } else {
-            "<unnamed>".to_string()
-        }
+    pub fn name(&self) -> &str {
+        self.name.as_deref().unwrap_or("<unnamed>")
     }
 
     /// Returns the Left Hand Side expression.

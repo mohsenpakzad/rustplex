@@ -38,12 +38,8 @@ pub struct Variable {
 // Public Getters for Read-Only Access
 impl Variable {
     /// Returns the name of the variable.
-    pub fn name(&self) -> String {
-        if let Some(name) = &self.name {
-            name.clone()
-        } else {
-            "<unnamed>".to_string()
-        }
+    pub fn name(&self) -> &str {
+        self.name.as_deref().unwrap_or("<unnamed>")
     }
 
     /// Returns the type of the variable.
