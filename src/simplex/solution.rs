@@ -1,7 +1,10 @@
-use std::{fmt, time};
+use std::{fmt, ops::Index, time};
 use slotmap::{SecondaryMap, Key};
 
-use super::status::SolverStatus;
+use crate::{
+    core::variable::VariableKey,
+    simplex::status::SolverStatus
+};
 
 /// The result of a solved optimization model.
 #[derive(Debug, Clone)]
@@ -64,6 +67,30 @@ impl<V: Key> SolverSolution<V> {
     /// Returns the time taken to solve the problem.
     pub fn solve_time(&self) -> &std::time::Duration {
         &self.solve_time
+    }
+
+    /// Returns the value of a specific variable.
+    ///
+    /// Returns `0.0` if the variable is not found in the solution (e.g., it was presolved out
+    /// or is implicit).
+    pub fn value(&self, var_key: V) -> f64 {
+        self.variable_values
+            .as_ref()
+            .and_then(|map| map.get(var_key))
+            .copied()
+            .unwrap_or(0.0)
+    }
+}
+
+/// Allows indexing notation `solution[x]` to retrieve variable values.
+impl Index<VariableKey> for SolverSolution<VariableKey> {
+    type Output = f64;
+
+    fn index(&self, var_key: VariableKey) -> &Self::Output {
+        match self.variable_values.as_ref() {
+            Some(map) => map.get(var_key).unwrap_or(&0.0),
+            None => &0.0,
+        }
     }
 }
 
