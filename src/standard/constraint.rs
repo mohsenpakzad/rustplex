@@ -74,7 +74,7 @@ impl fmt::Display for StandardConstraint {
 pub struct StandardConstraintBuilder<'a> {
     arena: &'a mut DenseSlotMap<StandardConstraintKey, StandardConstraint>,
     lhs: LinearExpr<StandardVariableKey>,
-    name: String,
+    name: Option<String>,
 }
 
 impl<'a> StandardConstraintBuilder<'a> {
@@ -85,13 +85,13 @@ impl<'a> StandardConstraintBuilder<'a> {
         Self {
             arena,
             lhs,
-            name: String::new(),
+            name: None,
         }
     }
 
     /// Sets the name of the constraint.
     pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.name = name.into();
+        self.name = Some(name.into());
         self
     }
 
@@ -102,7 +102,7 @@ impl<'a> StandardConstraintBuilder<'a> {
     /// This is the only allowed relation in the Standard Model.
     pub fn less_than_or_equal(self, rhs: f64) -> StandardConstraintKey {
         let data = StandardConstraint {
-            name: Some(self.name),
+            name: self.name,
             lhs: self.lhs,
             rhs,
         };

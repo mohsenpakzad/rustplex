@@ -81,7 +81,7 @@ impl fmt::Display for Constraint {
 pub struct ConstraintBuilder<'a> {
     arena: &'a mut DenseSlotMap<ConstraintKey, Constraint>,
     lhs: LinearExpr<VariableKey>,
-    name: String,
+    name: Option<String>,
 }
 
 impl<'a> ConstraintBuilder<'a> {
@@ -92,13 +92,13 @@ impl<'a> ConstraintBuilder<'a> {
         Self {
             arena,
             lhs,
-            name: String::new(),
+            name: None,
         }
     }
 
     /// Sets the name of the constraint.
     pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.name = name.into();
+        self.name = Some(name.into());
         self
     }
 
@@ -136,7 +136,7 @@ impl<'a> ConstraintBuilder<'a> {
 
     fn finish(self, sense: ConstraintSense, rhs: LinearExpr<VariableKey>) -> ConstraintKey {
         let data = Constraint {
-            name: Some(self.name),
+            name: self.name,
             lhs: self.lhs,
             sense,
             rhs,
