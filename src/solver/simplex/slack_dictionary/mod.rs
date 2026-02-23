@@ -1,21 +1,24 @@
+pub mod row;
+pub mod variable;
+
 use std::{fmt, mem};
 use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
     modeling::expression::LinearExpr, 
     standard::{model::StandardModel, variable::StandardVariableKey},
-    solver::simplex::slack::{
-        dict_entry::{DictEntry, DictEntryKey},
-        dict_variable::{DictVariableKey, DictVariable}
+    solver::simplex::slack_dictionary::{
+        row::{DictionaryRow, DictionaryRowKey},
+        variable::{DictionaryVariableKey, DictionaryVariable}
     }, 
 };
 
 #[derive(Debug, Clone)]
 pub struct SlackDictionary {
-    variables: DenseSlotMap<DictVariableKey, DictVariable>,
-    objective: LinearExpr<DictVariableKey>,
-    entries: DenseSlotMap<DictEntryKey, DictEntry>,
-    mapping: SecondaryMap<StandardVariableKey, DictVariableKey>,
+    variables: DenseSlotMap<DictionaryVariableKey, DictionaryVariable>,
+    objective: LinearExpr<DictionaryVariableKey>,
+    entries: DenseSlotMap<DictionaryRowKey, DictionaryRow>,
+    mapping: SecondaryMap<StandardVariableKey, DictionaryVariableKey>,
 }
 
 impl SlackDictionary {
@@ -24,14 +27,14 @@ impl SlackDictionary {
         let mut mapping = SecondaryMap::new();
 
         for var_key in standard_model.variables().keys() {
-            let dict_key = variables.insert(DictVariable::new_non_slack(var_key));
+            let dict_key = variables.insert(DictionaryVariable::new_non_slack(var_key));
             mapping.insert(var_key, dict_key);
         }
 
         let mut entries = DenseSlotMap::with_key();
         for (index, constraint) in standard_model.constraints().values().enumerate() {
-            let dict_key = variables.insert(DictVariable::new_slack(index));
-            entries.insert(DictEntry::new(
+            let dict_key = variables.insert(DictionaryVariable::new_slack(index));
+            entries.insert(DictionaryRow::new(
                 dict_key,
                 Self::transform_expression(
                     &(constraint.rhs() - constraint.lhs()),
@@ -54,31 +57,31 @@ impl SlackDictionary {
         }
     }
 
-    pub fn set_objective(&mut self, objective: LinearExpr<DictVariableKey>) {
+    pub fn set_objective(&mut self, objective: LinearExpr<DictionaryVariableKey>) {
         self.objective = objective;
     }
 
-    pub fn replace_objective(&mut self, new_objective: LinearExpr<DictVariableKey>) -> LinearExpr<DictVariableKey> {
+    pub fn replace_objective(&mut self, new_objective: LinearExpr<DictionaryVariableKey>) -> LinearExpr<DictionaryVariableKey> {
         mem::replace(&mut self.objective, new_objective)
     }
 
-    pub fn variables(&self) -> &DenseSlotMap<DictVariableKey, DictVariable> {
+    pub fn variables(&self) -> &DenseSlotMap<DictionaryVariableKey, DictionaryVariable> {
         &self.variables
     }
 
-    pub fn variables_mut(&mut self) -> &mut DenseSlotMap<DictVariableKey, DictVariable> {
+    pub fn variables_mut(&mut self) -> &mut DenseSlotMap<DictionaryVariableKey, DictionaryVariable> {
         &mut self.variables
     }
 
-    pub fn objective(&self) -> &LinearExpr<DictVariableKey> {
+    pub fn objective(&self) -> &LinearExpr<DictionaryVariableKey> {
         &self.objective
     }
 
-    pub fn entries(&self) -> &DenseSlotMap<DictEntryKey, DictEntry> {
+    pub fn entries(&self) -> &DenseSlotMap<DictionaryRowKey, DictionaryRow> {
         &self.entries
     }
 
-    pub fn mapping(&self) -> &SecondaryMap<StandardVariableKey, DictVariableKey> {
+    pub fn mapping(&self) -> &SecondaryMap<StandardVariableKey, DictionaryVariableKey> {
         &self.mapping
     }
 
@@ -86,7 +89,7 @@ impl SlackDictionary {
         self.objective.constant
     }
 
-    pub fn basic_values(&self) -> SecondaryMap<DictVariableKey, f64> {
+    pub fn basic_values(&self) -> SecondaryMap<DictionaryVariableKey, f64> {
         self.entries
             .values()
             .map(|entry| (entry.basic_var().clone(), entry.value()))
@@ -107,30 +110,30 @@ impl SlackDictionary {
                     std_var,
                     basic_to_entry
                         .get(*dict_var)
-                        .map(DictEntry::value)
+                        .map(DictionaryRow::value)
                         .unwrap_or(0.0),
                 )
             })
             .collect()
     }
 
-    pub fn add_var_to_all_entries(&mut self, var: DictVariableKey, coefficient: f64) {
+    pub fn add_var_to_all_entries(&mut self, var: DictionaryVariableKey, coefficient: f64) {
         for entry in self.entries.values_mut() {
             entry.add_non_basic(var.clone(), coefficient);
         }
     }
 
-    pub fn remove_var_from_all_entries(&mut self, var: DictVariableKey) {
+    pub fn remove_var_from_all_entries(&mut self, var: DictionaryVariableKey) {
         for entry in self.entries.values_mut() {
             entry.remove_non_basic(var.clone());
         }
     }
 
-    pub fn remove_entry(&mut self, key: DictEntryKey) {
+    pub fn remove_entry(&mut self, key: DictionaryRowKey) {
         self.entries.remove(key);
     }
 
-    pub fn pivot(&mut self, entering: DictVariableKey, leaving_key: DictEntryKey) {
+    pub fn pivot(&mut self, entering: DictionaryVariableKey, leaving_key: DictionaryRowKey) {
         // Get a mutable reference to the leaving entry in the arena and update its basis
         let leaving_entry = self.entries.get_mut(leaving_key).unwrap();
         leaving_entry.switch_to_basic(entering);
@@ -153,13 +156,13 @@ impl SlackDictionary {
 
     fn transform_expression(
         expression: &LinearExpr<StandardVariableKey>,
-        variable_map: &SecondaryMap<StandardVariableKey, DictVariableKey>,
-    ) -> LinearExpr<DictVariableKey> {
+        variable_map: &SecondaryMap<StandardVariableKey, DictionaryVariableKey>,
+    ) -> LinearExpr<DictionaryVariableKey> {
         let std_terms = expression
             .terms
             .iter()
             .map(|(var, coefficient)| (variable_map.get(*var).unwrap().clone(), *coefficient))
-            .collect::<Vec<(DictVariableKey, f64)>>();
+            .collect::<Vec<(DictionaryVariableKey, f64)>>();
 
         LinearExpr::with_terms_and_constant(std_terms, expression.constant)
     }

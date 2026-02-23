@@ -3,47 +3,47 @@ use slotmap::new_key_type;
 
 use crate::{
     modeling::expression::LinearExpr,
-    solver::simplex::slack::dict_variable::DictVariableKey
+    solver::simplex::slack_dictionary::variable::DictionaryVariableKey
 };
 
 new_key_type! {
-    pub struct DictEntryKey;
+    pub struct DictionaryRowKey;
 }
 
-impl fmt::Display for DictEntryKey {
+impl fmt::Display for DictionaryRowKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DictEntryKey({:?})", self.0)
+        write!(f, "DictionaryRowKey({:?})", self.0)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct DictEntry {
-    basic_var: DictVariableKey,
-    non_basics_expr: LinearExpr<DictVariableKey>,
+pub struct DictionaryRow {
+    basic_var: DictionaryVariableKey,
+    non_basics_expr: LinearExpr<DictionaryVariableKey>,
 }
 
-impl DictEntry {
+impl DictionaryRow {
     /// Creates a new reference to a dictionary entry.
-    pub fn new(basic_var: DictVariableKey, non_basics_expr: LinearExpr<DictVariableKey>) -> Self {
-        DictEntry {
+    pub fn new(basic_var: DictionaryVariableKey, non_basics_expr: LinearExpr<DictionaryVariableKey>) -> Self {
+        DictionaryRow {
             basic_var,
             non_basics_expr,
         }
     }
 
     /// Adds a non-basic variable with a given coefficient to the expression.
-    pub fn add_non_basic(&mut self, var: DictVariableKey, coefficient: f64) {
+    pub fn add_non_basic(&mut self, var: DictionaryVariableKey, coefficient: f64) {
         self.non_basics_expr.add_term(var, coefficient);
     }
 
     /// Removes a non-basic variable from the expression and
     /// returns its coefficient if it existed.
-    pub fn remove_non_basic(&mut self, var: DictVariableKey) -> Option<f64> {
+    pub fn remove_non_basic(&mut self, var: DictionaryVariableKey) -> Option<f64> {
         self.non_basics_expr.remove_term(&var)
     }
 
     /// Retrieves the coefficient of a non-basic variable from the non-basic expression.
-    pub fn non_basic_coefficient(&self, var: &DictVariableKey) -> f64 {
+    pub fn non_basic_coefficient(&self, var: &DictionaryVariableKey) -> f64 {
         self.non_basics_expr.coefficient(var)
     }
 
@@ -51,15 +51,15 @@ impl DictEntry {
     /// scaling the new expression by the old variable's coefficient.
     pub fn replace_non_basic_with_expr(
         &mut self,
-        var: DictVariableKey,
-        replacement_expr: &LinearExpr<DictVariableKey>,
+        var: DictionaryVariableKey,
+        replacement_expr: &LinearExpr<DictionaryVariableKey>,
     ) -> Option<f64> {
         self.non_basics_expr.replace_var_with_expr(var, replacement_expr)
     }
 
     /// Switches the given non-basic variable to a basic variable,
     /// scaling the expression and setting the old basic variable as non-basic.
-    pub fn switch_to_basic(&mut self, non_basic_var: DictVariableKey) -> Option<f64> {
+    pub fn switch_to_basic(&mut self, non_basic_var: DictionaryVariableKey) -> Option<f64> {
         if let Some(coefficient) = self.non_basics_expr.remove_term(&non_basic_var) {
             let old_basic_var = mem::replace(&mut self.basic_var, non_basic_var);
 
@@ -72,7 +72,7 @@ impl DictEntry {
     }
 
     /// Gets the basic variable of the dictionary entry.
-    pub fn basic_var(&self) -> DictVariableKey {
+    pub fn basic_var(&self) -> DictionaryVariableKey {
         self.basic_var
     }
 
@@ -82,12 +82,12 @@ impl DictEntry {
     }
 
     /// Gets the expression of non-basic variables in the dictionary entry.
-    pub fn expr(&self) -> LinearExpr<DictVariableKey> {
+    pub fn expr(&self) -> LinearExpr<DictionaryVariableKey> {
         self.non_basics_expr.clone()
     }
 }
 
-impl fmt::Display for DictEntry {
+impl fmt::Display for DictionaryRow {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

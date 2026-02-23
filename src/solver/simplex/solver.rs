@@ -8,10 +8,10 @@ use crate::{
         variable::StandardVariableKey
     },
     solver::simplex::{
-        slack::{
-            dict_entry::DictEntryKey,
-            dict_variable::{DictVariableKey, DictVariable},
-            dictionary::SlackDictionary,
+        slack_dictionary::{
+            row::DictionaryRowKey,
+            variable::{DictionaryVariableKey, DictionaryVariable},
+            SlackDictionary,
         },
         config::SolverConfiguration,
         solution::SolverSolution,
@@ -77,8 +77,8 @@ impl SimplexSolver {
             .any(|entry| entry.value() < -self.config.tolerance)
     }
 
-    fn create_auxiliary_problem(&mut self) -> (DictVariableKey, LinearExpr<DictVariableKey>) {
-        let aux_var_key = self.slack_dict.variables_mut().insert(DictVariable::new_auxiliary());
+    fn create_auxiliary_problem(&mut self) -> (DictionaryVariableKey, LinearExpr<DictionaryVariableKey>) {
+        let aux_var_key = self.slack_dict.variables_mut().insert(DictionaryVariable::new_auxiliary());
 
         let original_objective = self
             .slack_dict
@@ -89,7 +89,7 @@ impl SimplexSolver {
         (aux_var_key, original_objective)
     }
 
-    fn prepare_phase_two(&mut self, aux_var: DictVariableKey, mut original_objective: LinearExpr<DictVariableKey>) {
+    fn prepare_phase_two(&mut self, aux_var: DictionaryVariableKey, mut original_objective: LinearExpr<DictionaryVariableKey>) {
         // 1. Check if the Auxiliary variable is still in the Basis
         // We look for an entry where the basic variable is 'Aux'
         let aux_entry = self
@@ -129,7 +129,7 @@ impl SimplexSolver {
         self.slack_dict.set_objective(original_objective);
     }
 
-    fn solve_phase1(&mut self, aux_var: DictVariableKey) -> SolverStatus {
+    fn solve_phase1(&mut self, aux_var: DictionaryVariableKey) -> SolverStatus {
         self.iteration_count += 1;
         let leaving = self.find_phase1_initial_leaving_variable();
 
@@ -155,7 +155,7 @@ impl SimplexSolver {
         SolverStatus::MaxIterationsReached
     }
 
-    fn find_entering_variable(&self) -> Option<DictVariableKey> {
+    fn find_entering_variable(&self) -> Option<DictionaryVariableKey> {
         self.slack_dict
             .objective()
             .terms
@@ -168,7 +168,7 @@ impl SimplexSolver {
             .map(|(var, _)| var.clone())
     }
 
-    fn find_leaving_variable(&self, entering: &DictVariableKey) -> Option<DictEntryKey> {
+    fn find_leaving_variable(&self, entering: &DictionaryVariableKey) -> Option<DictionaryRowKey> {
         self.slack_dict
             .entries()
             .iter()
@@ -187,7 +187,7 @@ impl SimplexSolver {
             .map(|(ek, _, _)| ek)
     }
 
-    fn find_phase1_initial_leaving_variable(&self) -> DictEntryKey {
+    fn find_phase1_initial_leaving_variable(&self) -> DictionaryRowKey {
         self.slack_dict
             .entries()
             .iter()
@@ -196,15 +196,15 @@ impl SimplexSolver {
             .unwrap()
     }
 
-    fn compare_variables(&self, var1: &DictVariableKey, var2: &DictVariableKey) -> cmp::Ordering {
+    fn compare_variables(&self, var1: &DictionaryVariableKey, var2: &DictionaryVariableKey) -> cmp::Ordering {
         let var1 = self.slack_dict.variables().get(*var1).unwrap();
         let var2 = self.slack_dict.variables().get(*var2).unwrap();
 
         match (var1, var2) {
-            (DictVariable::NonSlack(_), DictVariable::Slack(_)) => cmp::Ordering::Greater,
-            (DictVariable::Auxiliary, DictVariable::Slack(_)) => cmp::Ordering::Greater,
-            (DictVariable::Slack(_), DictVariable::NonSlack(_)) => cmp::Ordering::Less,
-            (DictVariable::Slack(_), DictVariable::Auxiliary) => cmp::Ordering::Less,
+            (DictionaryVariable::NonSlack(_), DictionaryVariable::Slack(_)) => cmp::Ordering::Greater,
+            (DictionaryVariable::Auxiliary, DictionaryVariable::Slack(_)) => cmp::Ordering::Greater,
+            (DictionaryVariable::Slack(_), DictionaryVariable::NonSlack(_)) => cmp::Ordering::Less,
+            (DictionaryVariable::Slack(_), DictionaryVariable::Auxiliary) => cmp::Ordering::Less,
             _ => cmp::Ordering::Equal,
         }
     }
