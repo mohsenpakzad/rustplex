@@ -2,7 +2,7 @@ use std::fmt;
 use slotmap::DenseSlotMap;
 
 use crate::{
-    core::{
+    modeling::{
         constraint::{Constraint, ConstraintBuilder, ConstraintKey},
         expression::LinearExpr,
         objective::{Objective, ObjectiveSense},

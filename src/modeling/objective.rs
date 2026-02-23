@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::core::expression::LinearExpr;
+use crate::modeling::expression::LinearExpr;
 
 use super::variable::VariableKey;
 

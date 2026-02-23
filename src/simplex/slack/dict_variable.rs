@@ -2,7 +2,7 @@ use std::fmt;
 use slotmap::new_key_type;
 
 use crate::{
-    core::expression::{ExprVariable, impl_expr_display, impl_expr_ops},
+    modeling::expression::{ExprVariable, impl_expr_display, impl_expr_ops},
     standard::variable::StandardVariableKey,
 };
 

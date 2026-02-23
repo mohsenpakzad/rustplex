@@ -2,7 +2,7 @@ use std::{fmt, mem};
 use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
-    core::expression::LinearExpr, 
+    modeling::expression::LinearExpr, 
     standard::{model::StandardModel, variable::StandardVariableKey},
     simplex::slack::{
         dict_entry::{DictEntry, DictEntryKey},

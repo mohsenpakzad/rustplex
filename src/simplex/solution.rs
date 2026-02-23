@@ -2,7 +2,7 @@ use std::{fmt, ops::Index, time};
 use slotmap::{SecondaryMap, Key};
 
 use crate::{
-    core::variable::VariableKey,
+    modeling::variable::VariableKey,
     simplex::status::SolverStatus
 };
 

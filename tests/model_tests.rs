@@ -1,7 +1,15 @@
 mod common;
 
 use common::assert_approx_eq;
-use rustplex::{error::SolverError, Model, ObjectiveSense::{Maximize, Minimize}, SolverStatus};
+use rustplex::{
+    modeling::{
+        expression::LinearExpr, 
+        model::Model,
+        objective::ObjectiveSense::{Maximize, Minimize}
+    },
+    simplex::status::SolverStatus,
+    error::SolverError,
+};
 
 /// Test Case 1: Standard Maximization Problem
 ///
@@ -444,7 +452,7 @@ fn test_scale_hypercube_50_vars() {
     let mut model = Model::new();
     let n = 50;
     let mut vars = Vec::new();
-    let mut objective = rustplex::core::expression::LinearExpr::new();
+    let mut objective = LinearExpr::new();
 
     // Create 50 variables
     for _ in 0..n {

@@ -1,7 +1,7 @@
 use slotmap::SecondaryMap;
 
 use crate::{
-    core::{
+    modeling::{
         constraint::{Constraint, ConstraintSense},
         expression::LinearExpr,
         model::Model,

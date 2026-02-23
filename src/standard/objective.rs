@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{
-    core::expression::LinearExpr,
+    modeling::expression::LinearExpr,
     standard::variable::StandardVariableKey
 };
 

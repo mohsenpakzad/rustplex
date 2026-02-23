@@ -1,7 +1,7 @@
 use std::fmt;
 use slotmap::{new_key_type, DenseSlotMap};
 
-use crate::core::expression::LinearExpr;
+use crate::modeling::expression::LinearExpr;
 use crate::standard::variable::StandardVariableKey;
 
 new_key_type! {
