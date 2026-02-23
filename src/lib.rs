@@ -1,3 +1,4 @@
+pub mod common;
 pub mod modeling;
 pub mod error;
 pub mod solver;

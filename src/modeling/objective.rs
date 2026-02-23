@@ -1,8 +1,9 @@
 use std::fmt;
 
-use crate::modeling::expression::LinearExpr;
-
-use super::variable::VariableKey;
+use crate::{
+    common::expression::LinearExpr,
+    modeling::variable::VariableKey
+};
 
 #[derive(Debug, Clone)]
 pub struct Objective {

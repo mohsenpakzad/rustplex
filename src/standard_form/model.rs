@@ -2,7 +2,7 @@ use std::fmt;
 use slotmap::DenseSlotMap;
 
 use crate::{
-    modeling::expression::LinearExpr,
+    common::expression::LinearExpr,
     error::SolverError,
     solver::{
         config::SolverConfig,

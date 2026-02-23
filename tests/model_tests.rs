@@ -2,8 +2,8 @@ mod common;
 
 use common::assert_approx_eq;
 use rustplex::{
+    common::expression::LinearExpr,
     modeling::{
-        expression::LinearExpr, 
         model::Model,
         objective::ObjectiveSense::{Maximize, Minimize}
     },

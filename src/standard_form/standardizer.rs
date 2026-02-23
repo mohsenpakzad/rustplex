@@ -1,9 +1,9 @@
 use slotmap::SecondaryMap;
 
 use crate::{
+    common::expression::LinearExpr,
     modeling::{
         constraint::{Constraint, ConstraintSense},
-        expression::LinearExpr,
         model::Model,
         objective::{Objective, ObjectiveSense},
         variable::{Variable, VariableKey, VariableType}

@@ -2,7 +2,7 @@ use std::fmt;
 use std::ops::RangeInclusive;
 use slotmap::{new_key_type, DenseSlotMap};
 
-use crate::modeling::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
+use crate::common::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
 
 new_key_type! {
     pub struct VariableKey;

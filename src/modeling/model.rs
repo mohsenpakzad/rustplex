@@ -2,9 +2,9 @@ use std::fmt;
 use slotmap::DenseSlotMap;
 
 use crate::{
+    common::expression::LinearExpr,
     modeling::{
         constraint::{Constraint, ConstraintBuilder, ConstraintKey},
-        expression::LinearExpr,
         objective::{Objective, ObjectiveSense},
         variable::{Variable, VariableBuilder, VariableKey, VariableType},
     },

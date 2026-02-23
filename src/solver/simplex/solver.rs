@@ -1,7 +1,7 @@
 use std::{cmp, time::Instant};
 
 use crate::{
-    modeling::expression::LinearExpr,
+    common::expression::LinearExpr,
     error::SolverError,
     standard_form::{
         model::StandardModel,

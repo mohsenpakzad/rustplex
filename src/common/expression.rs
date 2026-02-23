@@ -230,7 +230,7 @@ macro_rules! impl_expr_display {
 macro_rules! impl_expr_ops {
     ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
         use std::ops::{Add, Div, Mul, Neg, Sub};
-        use crate::modeling::expression::LinearExpr;
+        use crate::common::expression::LinearExpr;
 
         // ============================================================
         //  HELPER MACROS: Automatic Reference Forwarding

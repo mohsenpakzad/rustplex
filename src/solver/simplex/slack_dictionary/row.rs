@@ -2,7 +2,7 @@ use std::{fmt, mem};
 use slotmap::new_key_type;
 
 use crate::{
-    modeling::expression::LinearExpr,
+    common::expression::LinearExpr,
     solver::simplex::slack_dictionary::variable::DictionaryVariableKey
 };
 

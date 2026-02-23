@@ -5,7 +5,7 @@ use std::{fmt, mem};
 use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
-    modeling::expression::LinearExpr, 
+    common::expression::LinearExpr,
     standard_form::{model::StandardModel, variable::StandardVariableKey},
     solver::simplex::slack_dictionary::{
         row::{DictionaryRow, DictionaryRowKey},
