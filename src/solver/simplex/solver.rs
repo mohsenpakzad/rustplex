@@ -8,7 +8,7 @@ use crate::{
         variable::StandardVariableKey
     },
     solver::{
-        config::SolverConfiguration,
+        config::SolverConfig,
         solution::SolverSolution,
         status::SolverStatus,
         simplex::slack_dictionary::{
@@ -22,13 +22,13 @@ use crate::{
 pub struct SimplexSolver {
     slack_dict: SlackDictionary,
     iteration_count: u32,
-    config: SolverConfiguration,
+    config: SolverConfig,
 }
 
 impl SimplexSolver {
     pub fn form_standard_model(
         standard_model: &StandardModel,
-        config: SolverConfiguration,
+        config: SolverConfig,
     ) -> Result<Self, SolverError> {
         if standard_model.variables().is_empty() {
             return Err(SolverError::NoVariables);

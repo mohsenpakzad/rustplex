@@ -10,7 +10,7 @@ use crate::{
     },
     error::SolverError,
     solver::{
-        config::SolverConfiguration,
+        config::SolverConfig,
         solution::SolverSolution
     },
     standard::standardizer::Standardizer,
@@ -21,7 +21,7 @@ pub struct Model {
     variables: DenseSlotMap<VariableKey, Variable>,
     constraints: DenseSlotMap<ConstraintKey, Constraint>,
     objective: Option<Objective>,
-    config: SolverConfiguration,
+    config: SolverConfig,
 }
 
 pub struct ModelDisplay<'a, T> {
@@ -36,13 +36,13 @@ impl Model {
             variables: DenseSlotMap::with_key(),
             constraints: DenseSlotMap::with_key(),
             objective: None,
-            config: SolverConfiguration::default(),
+            config: SolverConfig::default(),
         }
     }
 
     // --- Configuration Methods ---
 
-    pub fn with_config(mut self, config: SolverConfiguration) -> Self {
+    pub fn with_config(mut self, config: SolverConfig) -> Self {
         self.config = config;
         self
     }
@@ -121,7 +121,7 @@ impl Model {
         self.objective.as_ref()
     }
 
-    pub fn config(&self) -> &SolverConfiguration {
+    pub fn config(&self) -> &SolverConfig {
         &self.config
     }
 }

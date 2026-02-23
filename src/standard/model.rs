@@ -5,7 +5,7 @@ use crate::{
     modeling::expression::LinearExpr,
     error::SolverError,
     solver::{
-        config::SolverConfiguration,
+        config::SolverConfig,
         solution::SolverSolution,
         simplex::solver::SimplexSolver,
     },
@@ -22,7 +22,7 @@ pub struct StandardModel {
     variables: DenseSlotMap<StandardVariableKey, StandardVariable>,
     constraints: DenseSlotMap<StandardConstraintKey, StandardConstraint>,
     objective: Option<StandardObjective>,
-    config: SolverConfiguration,
+    config: SolverConfig,
 }
 
 impl StandardModel {
@@ -31,11 +31,11 @@ impl StandardModel {
             variables: DenseSlotMap::with_key(),
             constraints: DenseSlotMap::with_key(),
             objective: None,
-            config: SolverConfiguration::default(),
+            config: SolverConfig::default(),
         }
     }
 
-    pub fn with_config(mut self, config: SolverConfiguration) -> Self {
+    pub fn with_config(mut self, config: SolverConfig) -> Self {
         self.config = config;
         self
     }
