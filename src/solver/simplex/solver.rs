@@ -7,7 +7,7 @@ use crate::{
         model::StandardModel,
         variable::StandardVariableKey
     },
-    simplex::{
+    solver::simplex::{
         slack::{
             dict_entry::DictEntryKey,
             dict_variable::{DictVariableKey, DictVariable},

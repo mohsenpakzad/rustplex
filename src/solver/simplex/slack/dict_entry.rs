@@ -3,7 +3,7 @@ use slotmap::new_key_type;
 
 use crate::{
     modeling::expression::LinearExpr,
-    simplex::slack::dict_variable::DictVariableKey
+    solver::simplex::slack::dict_variable::DictVariableKey
 };
 
 new_key_type! {

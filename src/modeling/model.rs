@@ -9,7 +9,7 @@ use crate::{
         variable::{Variable, VariableBuilder, VariableKey, VariableType},
     },
     error::SolverError,
-    simplex::{config::SolverConfiguration, solution::SolverSolution},
+    solver::simplex::{config::SolverConfiguration, solution::SolverSolution},
     standard::standardizer::Standardizer,
 };
 

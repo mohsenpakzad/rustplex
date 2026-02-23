@@ -4,7 +4,7 @@ use slotmap::DenseSlotMap;
 use crate::{
     modeling::expression::LinearExpr,
     error::SolverError,
-    simplex::{
+    solver::simplex::{
         config::SolverConfiguration,
         solution::SolverSolution,
         solver::SimplexSolver

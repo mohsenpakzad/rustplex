@@ -3,7 +3,7 @@ use slotmap::{SecondaryMap, Key};
 
 use crate::{
     modeling::variable::VariableKey,
-    simplex::status::SolverStatus
+    solver::simplex::status::SolverStatus
 };
 
 /// The result of a solved optimization model.

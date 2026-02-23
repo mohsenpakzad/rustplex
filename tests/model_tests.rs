@@ -7,7 +7,7 @@ use rustplex::{
         model::Model,
         objective::ObjectiveSense::{Maximize, Minimize}
     },
-    simplex::status::SolverStatus,
+    solver::simplex::status::SolverStatus,
     error::SolverError,
 };
 

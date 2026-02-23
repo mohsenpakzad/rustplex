@@ -4,7 +4,7 @@ use slotmap::{DenseSlotMap, SecondaryMap};
 use crate::{
     modeling::expression::LinearExpr, 
     standard::{model::StandardModel, variable::StandardVariableKey},
-    simplex::slack::{
+    solver::simplex::slack::{
         dict_entry::{DictEntry, DictEntryKey},
         dict_variable::{DictVariableKey, DictVariable}
     }, 
