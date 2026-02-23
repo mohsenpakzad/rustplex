@@ -8,7 +8,7 @@ use crate::{
         objective::{Objective, ObjectiveSense},
         variable::{Variable, VariableKey, VariableType}
     }, 
-    solver::simplex::solution::SolverSolution,
+    solver::solution::SolverSolution,
     standard::{
         constraint::StandardConstraint,
         model::StandardModel,

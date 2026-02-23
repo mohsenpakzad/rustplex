@@ -4,10 +4,10 @@ use slotmap::DenseSlotMap;
 use crate::{
     modeling::expression::LinearExpr,
     error::SolverError,
-    solver::simplex::{
+    solver::{
         config::SolverConfiguration,
         solution::SolverSolution,
-        solver::SimplexSolver
+        simplex::solver::SimplexSolver,
     },
     standard::{
         constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey},

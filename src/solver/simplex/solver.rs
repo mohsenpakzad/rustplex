@@ -7,15 +7,15 @@ use crate::{
         model::StandardModel,
         variable::StandardVariableKey
     },
-    solver::simplex::{
-        slack_dictionary::{
+    solver::{
+        config::SolverConfiguration,
+        solution::SolverSolution,
+        status::SolverStatus,
+        simplex::slack_dictionary::{
             row::DictionaryRowKey,
             variable::{DictionaryVariableKey, DictionaryVariable},
             SlackDictionary,
         },
-        config::SolverConfiguration,
-        solution::SolverSolution,
-        status::SolverStatus,
     }
 };
 
