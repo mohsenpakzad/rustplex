@@ -1,7 +1,7 @@
 pub mod modeling;
 pub mod error;
 pub mod solver;
-pub mod standard;
+pub mod standard_form;
 
 pub use crate::modeling::constraint::{ConstraintKey, ConstraintSense};
 pub use crate::modeling::model::Model;

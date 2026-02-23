@@ -13,7 +13,7 @@ use crate::{
         config::SolverConfig,
         solution::SolverSolution
     },
-    standard::standardizer::Standardizer,
+    standard_form::standardizer::Standardizer,
 };
 
 #[derive(Debug)]

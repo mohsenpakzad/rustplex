@@ -3,7 +3,7 @@ use std::{cmp, time::Instant};
 use crate::{
     modeling::expression::LinearExpr,
     error::SolverError,
-    standard::{
+    standard_form::{
         model::StandardModel,
         variable::StandardVariableKey
     },

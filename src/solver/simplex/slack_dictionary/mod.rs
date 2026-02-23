@@ -6,7 +6,7 @@ use slotmap::{DenseSlotMap, SecondaryMap};
 
 use crate::{
     modeling::expression::LinearExpr, 
-    standard::{model::StandardModel, variable::StandardVariableKey},
+    standard_form::{model::StandardModel, variable::StandardVariableKey},
     solver::simplex::slack_dictionary::{
         row::{DictionaryRow, DictionaryRowKey},
         variable::{DictionaryVariableKey, DictionaryVariable}

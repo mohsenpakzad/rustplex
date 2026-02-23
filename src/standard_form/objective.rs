@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     modeling::expression::LinearExpr,
-    standard::variable::StandardVariableKey
+    standard_form::variable::StandardVariableKey
 };
 
 #[derive(Debug, Clone)]

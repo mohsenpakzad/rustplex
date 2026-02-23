@@ -9,7 +9,7 @@ use crate::{
         solution::SolverSolution,
         simplex::solver::SimplexSolver,
     },
-    standard::{
+    standard_form::{
         constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey},
         objective::StandardObjective,
         variable::{StandardVariable, StandardVariableBuilder, StandardVariableKey}

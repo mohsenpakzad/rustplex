@@ -9,7 +9,7 @@ use crate::{
         variable::{Variable, VariableKey, VariableType}
     }, 
     solver::solution::SolverSolution,
-    standard::{
+    standard_form::{
         constraint::StandardConstraint,
         model::StandardModel,
         variable::{StandardVariable, StandardVariableKey}
