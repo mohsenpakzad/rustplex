@@ -1,14 +1,21 @@
+use std::cmp::Ordering;
 use std::fmt;
 
+/// A linear expression stored as a sorted sparse vector.
+/// Invariants:
+/// 1. `terms` is always sorted by Variable T.
+/// 2. `terms` never contains coefficients with abs() < tolerance (effectively zero).
 #[derive(Debug, Clone)]
 pub struct LinearExpr<T: ExprVariable> {
     pub terms: Vec<(T, f64)>,
     pub constant: f64,
 }
 
-pub trait ExprVariable: Clone + Eq + fmt::Display {}
+pub trait ExprVariable: Clone + Eq + Ord + fmt::Display {}
 
 impl<T: ExprVariable> LinearExpr<T> {
+    const TOLERANCE: f64 = 1e-10;
+
     pub fn new() -> Self {
         Self {
             terms: Vec::new(),
@@ -17,17 +24,44 @@ impl<T: ExprVariable> LinearExpr<T> {
     }
 
     pub fn with_term(var: T, coefficient: f64) -> Self {
-        let mut terms = Vec::with_capacity(1);
-        terms.push((var, coefficient));
+        if coefficient.abs() < Self::TOLERANCE {
+            return Self::new();
+        }
         Self {
-            terms,
+            terms: vec![(var, coefficient)],
             constant: 0.0,
         }
     }
 
-    pub fn with_terms(terms: Vec<(T, f64)>) -> Self {
+    pub fn with_terms(mut terms: Vec<(T, f64)>) -> Self {
+        // 1. Sort by variable to enable O(N) merging later
+        terms.sort_by(|a, b| a.0.cmp(&b.0));
+
+        // 2. Deduplicate (merge coefficients for same variable) and Filter Zeros
+        let mut dedup_terms = Vec::with_capacity(terms.len());
+        if !terms.is_empty() {
+            let mut current_var = terms[0].0.clone();
+            let mut current_coeff = terms[0].1;
+
+            for (var, coeff) in terms.into_iter().skip(1) {
+                if var == current_var {
+                    current_coeff += coeff;
+                } else {
+                    if current_coeff.abs() >= Self::TOLERANCE {
+                        dedup_terms.push((current_var, current_coeff));
+                    }
+                    current_var = var;
+                    current_coeff = coeff;
+                }
+            }
+            // Push the last one
+            if current_coeff.abs() >= Self::TOLERANCE {
+                dedup_terms.push((current_var, current_coeff));
+            }
+        }
+
         Self {
-            terms,
+            terms: dedup_terms,
             constant: 0.0,
         }
     }
@@ -40,73 +74,144 @@ impl<T: ExprVariable> LinearExpr<T> {
     }
 
     pub fn with_terms_and_constant(terms: Vec<(T, f64)>, constant: f64) -> Self {
-        Self { terms, constant }
+        let mut expr = Self::with_terms(terms);
+        expr.constant = constant;
+        expr
     }
 
     pub fn coefficient(&self, var: &T) -> f64 {
         self.terms
-            .iter()
-            .find(|(v, _)| v == var)
-            .map(|(_, c)| *c)
+            .binary_search_by(|(v, _)| v.cmp(var))
+            .map(|idx| self.terms[idx].1)
             .unwrap_or(0.0)
     }
 
     pub fn add_term(&mut self, var: T, coefficient: f64) {
-        if let Some((_, c)) = self.terms.iter_mut().find(|(v, _)| *v == var) {
-            *c += coefficient;
-        } else {
-            self.terms.push((var, coefficient));
+        if coefficient.abs() < Self::TOLERANCE {
+            return;
+        }
+
+        match self.terms.binary_search_by(|(v, _)| v.cmp(&var)) {
+            Ok(idx) => {
+                self.terms[idx].1 += coefficient;
+                // Check if it became zero after addition
+                if self.terms[idx].1.abs() < Self::TOLERANCE {
+                    self.terms.remove(idx);
+                }
+            }
+            Err(idx) => {
+                self.terms.insert(idx, (var, coefficient));
+            }
         }
     }
 
     pub fn remove_term(&mut self, var: &T) -> Option<f64> {
-        if let Some(idx) = self.terms.iter().position(|(v, _)| v == var) {
-            let (_, coeff) = self.terms.swap_remove(idx);
-            Some(coeff)
+        if let Ok(idx) = self.terms.binary_search_by(|(v, _)| v.cmp(var)) {
+            Some(self.terms.remove(idx).1)
         } else {
             None
         }
     }
 
     pub fn add_expr(&mut self, other: &Self) {
-        for (var, coefficient) in &other.terms {
-            self.add_term(var.clone(), *coefficient);
-        }
-        self.constant += other.constant;
+        self.add_scaled_expr(other, 1.0);
     }
 
     pub fn sub_expr(&mut self, other: &Self) {
-        for (var, coefficient) in &other.terms {
-            self.add_term(var.clone(), -coefficient);
+        self.add_scaled_expr(other, -1.0);
+    }
+
+    pub fn add_scaled_expr(&mut self, other: &Self, scale: f64) {
+        if other.terms.is_empty() {
+            self.constant += other.constant * scale;
+            return;
         }
-        self.constant -= other.constant;
+
+        // We rebuild the vector. This is often faster than inserting into the middle
+        // repeatedly (which is O(N^2)) when `other` has many terms.
+        let mut new_terms = Vec::with_capacity(self.terms.len() + other.terms.len());
+        let mut i = 0;
+        let mut j = 0;
+
+        while i < self.terms.len() && j < other.terms.len() {
+            let (var_self, coeff_self) = &self.terms[i];
+            let (var_other, coeff_other) = &other.terms[j];
+
+            match var_self.cmp(var_other) {
+                Ordering::Less => {
+                    new_terms.push((var_self.clone(), *coeff_self));
+                    i += 1;
+                }
+                Ordering::Greater => {
+                    let scaled_val = coeff_other * scale;
+                    if scaled_val.abs() > Self::TOLERANCE {
+                        new_terms.push((var_other.clone(), scaled_val));
+                    }
+                    j += 1;
+                }
+                Ordering::Equal => {
+                    let new_coeff = *coeff_self + (coeff_other * scale);
+                    if new_coeff.abs() > Self::TOLERANCE {
+                        new_terms.push((var_self.clone(), new_coeff));
+                    }
+                    i += 1;
+                    j += 1;
+                }
+            }
+        }
+
+        // Append remaining from self
+        if i < self.terms.len() {
+            new_terms.extend_from_slice(&self.terms[i..]);
+        }
+
+        // Append remaining from other
+        while j < other.terms.len() {
+            let (var, coeff) = &other.terms[j];
+            let scaled_val = coeff * scale;
+            if scaled_val.abs() > Self::TOLERANCE {
+                new_terms.push((var.clone(), scaled_val));
+            }
+            j += 1;
+        }
+
+        self.terms = new_terms;
+        self.constant += other.constant * scale;
     }
 
     pub fn add_constant(&mut self, constant: f64) {
         self.constant += constant;
     }
 
+    pub fn scale(&mut self, scalar: f64) {
+        if scalar.abs() < Self::TOLERANCE {
+            self.terms.clear();
+            self.constant = 0.0;
+            return;
+        }
+        
+        // We might create zeros if the scalar is very small, so we must filter.
+        self.terms.retain_mut(|(_, c)| {
+            *c *= scalar;
+            c.abs() > Self::TOLERANCE
+        });
+        self.constant *= scalar;
+    }
+    
     pub fn replace_var_with_expr(
         &mut self,
         var: T,
         replacement_expr: &LinearExpr<T>,
     ) -> Option<f64> {
+        // 1. Remove the term (O(log N) + O(N) shift)
         if let Some(coefficient) = self.remove_term(&var) {
-            let mut replacement_scaled = replacement_expr.clone();
-            replacement_scaled.scale(coefficient);
-
-            self.add_expr(&replacement_scaled);
+            // 2. Merge the new expression (O(N + M))
+            // This replaces the old O(M * N) loop.
+            self.add_scaled_expr(replacement_expr, coefficient);
             Some(coefficient)
         } else {
             None
         }
-    }
-
-    pub fn scale(&mut self, scalar: f64) {
-        for (_, coefficient) in self.terms.iter_mut() {
-            *coefficient *= scalar;
-        }
-        self.constant *= scalar;
     }
 }
 
