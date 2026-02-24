@@ -130,6 +130,19 @@ impl<'a> VariableBuilder<'a> {
         self
     }
 
+    /// Sets the variable to be non-negative (x >= 0).
+    /// This is the standard assumption in many textbook LP problems.
+    pub fn non_negative(mut self) -> Self {
+        self.data.lower_bound = 0.0;
+        self
+    }
+
+    /// Sets the variable to be non-positive (x <= 0).
+    pub fn non_positive(mut self) -> Self {
+        self.data.upper_bound = 0.0;
+        self
+    }
+
     // --- Terminating Methods ---
 
     /// Finalizes the variable as **Continuous**.
