@@ -1,8 +1,7 @@
-use std::fmt;
-use slotmap::new_key_type;
-
 use crate::common::expression::LinearExpr;
 use crate::standard_form::variable::StandardVariableKey;
+use slotmap::new_key_type;
+use std::fmt;
 
 new_key_type! {
     pub struct StandardConstraintKey;

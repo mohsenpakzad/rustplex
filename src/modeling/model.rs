@@ -1,20 +1,16 @@
-use std::fmt;
-use slotmap::DenseSlotMap;
-
 use crate::{
     common::expression::LinearExpr,
+    error::SolverError,
     modeling::{
         constraint::{Constraint, ConstraintBuilder, ConstraintKey},
         objective::{Objective, ObjectiveSense},
         variable::{Variable, VariableBuilder, VariableKey, VariableType},
     },
-    error::SolverError,
-    solver::{
-        config::SolverConfig,
-        solution::SolverSolution
-    },
+    solver::{config::SolverConfig, solution::SolverSolution},
     standard_form::standardizer::Standardizer,
 };
+use slotmap::DenseSlotMap;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct Model {
@@ -67,11 +63,18 @@ impl Model {
         VariableBuilder::new(&mut self.variables)
     }
 
-    pub fn add_constraint(&mut self, lhs: impl Into<LinearExpr<VariableKey>>) -> ConstraintBuilder<'_> {
+    pub fn add_constraint(
+        &mut self,
+        lhs: impl Into<LinearExpr<VariableKey>>,
+    ) -> ConstraintBuilder<'_> {
         ConstraintBuilder::new(&mut self.constraints, lhs.into())
     }
 
-    pub fn set_objective(&mut self, sense: ObjectiveSense, expression: impl Into<LinearExpr<VariableKey>>) {
+    pub fn set_objective(
+        &mut self,
+        sense: ObjectiveSense,
+        expression: impl Into<LinearExpr<VariableKey>>,
+    ) {
         self.objective = Some(Objective::new(sense, expression.into()));
     }
 
@@ -172,8 +175,10 @@ impl<'a> fmt::Display for ModelDisplay<'a, &LinearExpr<VariableKey>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut first = true;
         for (var, coeff) in &self.item.terms {
-            if *coeff == 0.0 { continue; }
-            
+            if *coeff == 0.0 {
+                continue;
+            }
+
             if !first {
                 write!(f, " {} ", if *coeff > 0.0 { "+" } else { "-" })?;
             } else if *coeff < 0.0 {
@@ -189,10 +194,12 @@ impl<'a> fmt::Display for ModelDisplay<'a, &LinearExpr<VariableKey>> {
             write!(f, "{}", self.model.format(*var))?;
             first = false;
         }
-        if first { write!(f, "0")?; } // Handle empty/zero expression
-        // Add constant if exists
+        if first {
+            write!(f, "0")?;
+        } // Handle empty/zero expression
+          // Add constant if exists
         if self.item.constant.abs() > 1e-10 {
-             write!(f, " + {:.2}", self.item.constant)?;
+            write!(f, " + {:.2}", self.item.constant)?;
         }
         Ok(())
     }
@@ -214,7 +221,12 @@ impl<'a> fmt::Display for ModelDisplay<'a, &SolverSolution<VariableKey>> {
         if let Some(vars) = self.item.variable_values() {
             writeln!(f, "Variable Values: [")?;
             for (var_key, value) in vars {
-                writeln!(f, "\t{}: {:.2}", self.model.variables.get(var_key).unwrap(), value)?;
+                writeln!(
+                    f,
+                    "\t{}: {:.2}",
+                    self.model.variables.get(var_key).unwrap(),
+                    value
+                )?;
             }
             writeln!(f, "]")?;
         } else {

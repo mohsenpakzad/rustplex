@@ -1,17 +1,16 @@
 pub mod row;
 pub mod variable;
 
-use std::{fmt, mem};
-use slotmap::{DenseSlotMap, SecondaryMap};
-
 use crate::{
     common::expression::LinearExpr,
-    standard_form::{model::StandardModel, variable::StandardVariableKey},
     solver::simplex::slack_dictionary::{
         row::{DictionaryRow, DictionaryRowKey},
-        variable::{DictionaryVariableKey, DictionaryVariable}
-    }, 
+        variable::{DictionaryVariable, DictionaryVariableKey},
+    },
+    standard_form::{model::StandardModel, variable::StandardVariableKey},
 };
+use slotmap::{DenseSlotMap, SecondaryMap};
+use std::{fmt, mem};
 
 #[derive(Debug, Clone)]
 pub struct SlackDictionary {
@@ -36,10 +35,7 @@ impl SlackDictionary {
             let dict_key = variables.insert(DictionaryVariable::new_slack(index));
             entries.insert(DictionaryRow::new(
                 dict_key,
-                Self::transform_expression(
-                    &(constraint.rhs() - constraint.lhs()),
-                    &mapping
-                )
+                Self::transform_expression(&(constraint.rhs() - constraint.lhs()), &mapping),
             ));
         }
 
@@ -61,7 +57,10 @@ impl SlackDictionary {
         self.objective = objective;
     }
 
-    pub fn replace_objective(&mut self, new_objective: LinearExpr<DictionaryVariableKey>) -> LinearExpr<DictionaryVariableKey> {
+    pub fn replace_objective(
+        &mut self,
+        new_objective: LinearExpr<DictionaryVariableKey>,
+    ) -> LinearExpr<DictionaryVariableKey> {
         mem::replace(&mut self.objective, new_objective)
     }
 
@@ -69,7 +68,9 @@ impl SlackDictionary {
         &self.variables
     }
 
-    pub fn variables_mut(&mut self) -> &mut DenseSlotMap<DictionaryVariableKey, DictionaryVariable> {
+    pub fn variables_mut(
+        &mut self,
+    ) -> &mut DenseSlotMap<DictionaryVariableKey, DictionaryVariable> {
         &mut self.variables
     }
 
@@ -126,7 +127,7 @@ impl SlackDictionary {
         // Get a mutable reference to the leaving entry in the arena and update its basis
         let leaving_entry = self.rows.get_mut(leaving_key).unwrap();
         leaving_entry.switch_to_basic(entering);
-        
+
         // Clone the properties we need to avoid borrow-checker conflicts in the next loop
         let leaving_expr = leaving_entry.expr();
         let new_basic_var = leaving_entry.basic_var();
@@ -140,7 +141,8 @@ impl SlackDictionary {
         }
 
         // Update the objective
-        self.objective.replace_var_with_expr(entering, &leaving_expr);
+        self.objective
+            .replace_var_with_expr(entering, &leaving_expr);
     }
 
     fn transform_expression(

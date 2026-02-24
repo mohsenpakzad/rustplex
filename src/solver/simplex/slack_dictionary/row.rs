@@ -1,10 +1,9 @@
-use std::{fmt, mem};
-use slotmap::new_key_type;
-
 use crate::{
     common::expression::LinearExpr,
-    solver::simplex::slack_dictionary::variable::DictionaryVariableKey
+    solver::simplex::slack_dictionary::variable::DictionaryVariableKey,
 };
+use slotmap::new_key_type;
+use std::{fmt, mem};
 
 new_key_type! {
     pub struct DictionaryRowKey;
@@ -24,7 +23,10 @@ pub struct DictionaryRow {
 
 impl DictionaryRow {
     /// Creates a new reference to a dictionary entry.
-    pub fn new(basic_var: DictionaryVariableKey, non_basics_expr: LinearExpr<DictionaryVariableKey>) -> Self {
+    pub fn new(
+        basic_var: DictionaryVariableKey,
+        non_basics_expr: LinearExpr<DictionaryVariableKey>,
+    ) -> Self {
         DictionaryRow {
             basic_var,
             non_basics_expr,
@@ -54,7 +56,8 @@ impl DictionaryRow {
         var: DictionaryVariableKey,
         replacement_expr: &LinearExpr<DictionaryVariableKey>,
     ) -> Option<f64> {
-        self.non_basics_expr.replace_var_with_expr(var, replacement_expr)
+        self.non_basics_expr
+            .replace_var_with_expr(var, replacement_expr)
     }
 
     /// Switches the given non-basic variable to a basic variable,
@@ -89,11 +92,6 @@ impl DictionaryRow {
 
 impl fmt::Display for DictionaryRow {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} = {}",
-            self.basic_var,
-            self.non_basics_expr
-        )
+        write!(f, "{} = {}", self.basic_var, self.non_basics_expr)
     }
 }

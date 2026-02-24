@@ -1,10 +1,6 @@
+use crate::{modeling::variable::VariableKey, solver::status::SolverStatus};
+use slotmap::{Key, SecondaryMap};
 use std::{fmt, ops::Index, time};
-use slotmap::{SecondaryMap, Key};
-
-use crate::{
-    modeling::variable::VariableKey,
-    solver::status::SolverStatus
-};
 
 /// The result of a solved optimization model.
 #[derive(Debug, Clone)]

@@ -26,7 +26,7 @@ impl SolverStatus {
             Self::Optimal => "Optimal solution found",
             Self::Infeasible => "Problem is infeasible",
             Self::Unbounded => "Problem is unbounded",
-            Self::MaxIterationsReached => "Maximum iteration limit reached"
+            Self::MaxIterationsReached => "Maximum iteration limit reached",
         }
     }
 }

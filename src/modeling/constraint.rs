@@ -1,8 +1,6 @@
-use std::fmt;
+use crate::{common::expression::LinearExpr, modeling::variable::VariableKey};
 use slotmap::{new_key_type, DenseSlotMap};
-
-use crate::common::expression::LinearExpr;
-use crate::modeling::variable::VariableKey;
+use std::fmt;
 
 new_key_type! {
     pub struct ConstraintKey;

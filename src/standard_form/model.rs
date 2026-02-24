@@ -1,20 +1,15 @@
-use std::fmt;
-use slotmap::DenseSlotMap;
-
 use crate::{
     common::expression::LinearExpr,
     error::SolverError,
-    solver::{
-        config::SolverConfig,
-        solution::SolverSolution,
-        simplex::solver::SimplexSolver,
-    },
+    solver::{config::SolverConfig, simplex::solver::SimplexSolver, solution::SolverSolution},
     standard_form::{
         constraint::{StandardConstraint, StandardConstraintKey},
         objective::StandardObjective,
-        variable::{StandardVariable, StandardVariableKey}
-    }
+        variable::{StandardVariable, StandardVariableKey},
+    },
 };
+use slotmap::DenseSlotMap;
+use std::fmt;
 
 /// A model that enforces standard form constraints
 #[derive(Debug)]

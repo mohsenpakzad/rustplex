@@ -1,9 +1,5 @@
+use crate::{common::expression::LinearExpr, standard_form::variable::StandardVariableKey};
 use std::fmt;
-
-use crate::{
-    common::expression::LinearExpr,
-    standard_form::variable::StandardVariableKey
-};
 
 #[derive(Debug, Clone)]
 pub struct StandardObjective {

@@ -1,23 +1,19 @@
-use std::{cmp, time::Instant};
-
 use crate::{
     common::expression::LinearExpr,
     error::SolverError,
-    standard_form::{
-        model::StandardModel,
-        variable::StandardVariableKey
-    },
     solver::{
         config::SolverConfig,
-        solution::SolverSolution,
-        status::SolverStatus,
         simplex::slack_dictionary::{
             row::DictionaryRowKey,
-            variable::{DictionaryVariableKey, DictionaryVariable},
+            variable::{DictionaryVariable, DictionaryVariableKey},
             SlackDictionary,
         },
-    }
+        solution::SolverSolution,
+        status::SolverStatus,
+    },
+    standard_form::{model::StandardModel, variable::StandardVariableKey},
 };
+use std::{cmp, time::Instant};
 
 pub struct SimplexSolver {
     slack_dict: SlackDictionary,
@@ -77,8 +73,13 @@ impl SimplexSolver {
             .any(|entry| entry.value() < -self.config.tolerance)
     }
 
-    fn create_auxiliary_problem(&mut self) -> (DictionaryVariableKey, LinearExpr<DictionaryVariableKey>) {
-        let aux_var_key = self.slack_dict.variables_mut().insert(DictionaryVariable::new_auxiliary());
+    fn create_auxiliary_problem(
+        &mut self,
+    ) -> (DictionaryVariableKey, LinearExpr<DictionaryVariableKey>) {
+        let aux_var_key = self
+            .slack_dict
+            .variables_mut()
+            .insert(DictionaryVariable::new_auxiliary());
 
         let original_objective = self
             .slack_dict
@@ -89,7 +90,11 @@ impl SimplexSolver {
         (aux_var_key, original_objective)
     }
 
-    fn prepare_phase_two(&mut self, aux_var: DictionaryVariableKey, mut original_objective: LinearExpr<DictionaryVariableKey>) {
+    fn prepare_phase_two(
+        &mut self,
+        aux_var: DictionaryVariableKey,
+        mut original_objective: LinearExpr<DictionaryVariableKey>,
+    ) {
         // 1. Check if the Auxiliary variable is still in the Basis
         // We look for an entry where the basic variable is 'Aux'
         let aux_entry = self
@@ -182,7 +187,8 @@ impl SimplexSolver {
             })
             .max_by(|(_, e1, ub1), (_, e2, ub2)| {
                 ub1.total_cmp(ub2) // Compare coefficients first
-                    .then_with(|| self.compare_variables(&e1.basic_var(), &e2.basic_var())) // Break ties by variable type
+                    .then_with(|| self.compare_variables(&e1.basic_var(), &e2.basic_var()))
+                // Break ties by variable type
             })
             .map(|(ek, _, _)| ek)
     }
@@ -196,12 +202,18 @@ impl SimplexSolver {
             .unwrap()
     }
 
-    fn compare_variables(&self, var1: &DictionaryVariableKey, var2: &DictionaryVariableKey) -> cmp::Ordering {
+    fn compare_variables(
+        &self,
+        var1: &DictionaryVariableKey,
+        var2: &DictionaryVariableKey,
+    ) -> cmp::Ordering {
         let var1 = self.slack_dict.variables().get(*var1).unwrap();
         let var2 = self.slack_dict.variables().get(*var2).unwrap();
 
         match (var1, var2) {
-            (DictionaryVariable::NonSlack(_), DictionaryVariable::Slack(_)) => cmp::Ordering::Greater,
+            (DictionaryVariable::NonSlack(_), DictionaryVariable::Slack(_)) => {
+                cmp::Ordering::Greater
+            }
             (DictionaryVariable::Auxiliary, DictionaryVariable::Slack(_)) => cmp::Ordering::Greater,
             (DictionaryVariable::Slack(_), DictionaryVariable::NonSlack(_)) => cmp::Ordering::Less,
             (DictionaryVariable::Slack(_), DictionaryVariable::Auxiliary) => cmp::Ordering::Less,

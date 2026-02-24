@@ -1,8 +1,7 @@
+use crate::common::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
+use slotmap::{new_key_type, DenseSlotMap};
 use std::fmt;
 use std::ops::RangeInclusive;
-use slotmap::{new_key_type, DenseSlotMap};
-
-use crate::common::expression::{impl_expr_ops, impl_expr_display, ExprVariable};
 
 new_key_type! {
     pub struct VariableKey;

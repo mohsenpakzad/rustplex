@@ -1,10 +1,9 @@
-use std::fmt;
-use slotmap::new_key_type;
-
 use crate::{
-    common::expression::{ExprVariable, impl_expr_ops, impl_expr_display},
+    common::expression::{impl_expr_display, impl_expr_ops, ExprVariable},
     standard_form::variable::StandardVariableKey,
 };
+use slotmap::new_key_type;
+use std::fmt;
 
 new_key_type! {
     pub struct DictionaryVariableKey;

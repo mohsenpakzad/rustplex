@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::fmt;
-use std::ops::{Neg, Add, AddAssign, Sub, SubAssign, Mul, Div};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
 /// A linear expression stored as a sorted sparse vector.
 /// Invariants:
@@ -191,7 +191,7 @@ impl<T: ExprVariable> LinearExpr<T> {
             self.constant = 0.0;
             return;
         }
-        
+
         // We might create zeros if the scalar is very small, so we must filter.
         self.terms.retain_mut(|(_, c)| {
             *c *= scalar;
@@ -199,7 +199,7 @@ impl<T: ExprVariable> LinearExpr<T> {
         });
         self.constant *= scalar;
     }
-    
+
     pub fn replace_var_with_expr(
         &mut self,
         var: T,
@@ -410,8 +410,8 @@ impl<'a, T: ExprVariable> Div<f64> for &'a LinearExpr<T> {
 
 macro_rules! impl_expr_ops {
     ($var_type:ty) => {
-        use std::ops::{Add, Sub, Mul, Div, Neg};
         use crate::common::expression::LinearExpr;
+        use std::ops::{Add, Div, Mul, Neg, Sub};
 
         // --- 1. Variable Conversions ---
 
@@ -520,7 +520,7 @@ macro_rules! impl_expr_ops {
                 expr
             }
         }
-        
+
         /// Implements `f64 * &Expr`
         impl<'a> Mul<&'a LinearExpr<$var_type>> for f64 {
             type Output = LinearExpr<$var_type>;
@@ -545,7 +545,7 @@ macro_rules! impl_expr_ops {
         impl Add<$var_type> for f64 {
             type Output = LinearExpr<$var_type>;
             fn add(self, var: $var_type) -> LinearExpr<$var_type> {
-                 LinearExpr::with_terms_and_constant(vec![(var, 1.0)], self)
+                LinearExpr::with_terms_and_constant(vec![(var, 1.0)], self)
             }
         }
 
@@ -553,7 +553,7 @@ macro_rules! impl_expr_ops {
         impl Sub<f64> for $var_type {
             type Output = LinearExpr<$var_type>;
             fn sub(self, constant: f64) -> LinearExpr<$var_type> {
-                 LinearExpr::with_terms_and_constant(vec![(self, 1.0)], -constant)
+                LinearExpr::with_terms_and_constant(vec![(self, 1.0)], -constant)
             }
         }
 
@@ -673,5 +673,5 @@ macro_rules! impl_expr_display {
     };
 }
 
-pub(crate) use impl_expr_ops;
 pub(crate) use impl_expr_display;
+pub(crate) use impl_expr_ops;

@@ -1,7 +1,6 @@
-use std::fmt;
+use crate::common::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
 use slotmap::new_key_type;
-
-use crate::common::expression::{impl_expr_ops, impl_expr_display, ExprVariable};
+use std::fmt;
 
 new_key_type! {
     pub struct StandardVariableKey;
@@ -26,15 +25,13 @@ pub struct StandardVariable {
 // Public Getters for Read-Only Access
 impl StandardVariable {
     pub fn new() -> Self {
-        Self {
-            name: None,
-        }
+        Self { name: None }
     }
 
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
-    } 
+    }
 
     /// Returns the name of the standard variable.
     pub fn name(&self) -> &str {
@@ -44,18 +41,12 @@ impl StandardVariable {
 
 impl Default for StandardVariable {
     fn default() -> Self {
-        Self {
-            name: None,
-        }
+        Self { name: None }
     }
 }
 
 impl fmt::Display for StandardVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "StandardVariable({})",
-            self.name()
-        )
+        write!(f, "StandardVariable({})", self.name())
     }
 }
