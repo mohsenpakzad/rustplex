@@ -3,12 +3,20 @@ name = "rustplex"
 version = "0.2.0"
 edition = "2021"
 rust-version = "1.62"
-license = "MIT OR Apache-2.0"
 description = "A linear programming solver based on the Simplex algorithm for Rust"
+license = "MIT OR Apache-2.0"
 authors = ["Mohsen Pakzad <mohsen.pakzad99@gmail.com>"]
-keywords = ["rustplex", "lp-solver", "linear-programming", "simplex"]
 repository = "https://github.com/mohsenpakzad/rustplex"
+documentation = "https://docs.rs/rustplex"
 readme = "README.md"
+keywords = ["linear-programming", "simplex", "solver", "optimization", "math"]
+categories = ["mathematics", "algorithms", "science"]
+exclude = [
+    ".github",
+    ".gitignore",
+    "tests",
+    "assets",
+]
 
 [dependencies]
 slotmap = "1.1.1"
