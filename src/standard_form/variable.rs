@@ -1,7 +1,7 @@
 use std::fmt;
 use slotmap::new_key_type;
 
-use crate::common::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
+use crate::common::expression::{impl_expr_ops, impl_expr_display, ExprVariable};
 
 new_key_type! {
     pub struct StandardVariableKey;
@@ -15,8 +15,8 @@ impl fmt::Display for StandardVariableKey {
 
 impl ExprVariable for StandardVariableKey {}
 
+impl_expr_ops!(StandardVariableKey);
 impl_expr_display!(StandardVariableKey);
-impl_expr_ops!(StandardVariableKey, [f64, i32]);
 
 #[derive(Debug, Clone)]
 pub struct StandardVariable {

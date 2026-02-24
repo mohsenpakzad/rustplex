@@ -2,7 +2,7 @@ use std::fmt;
 use slotmap::new_key_type;
 
 use crate::{
-    common::expression::{ExprVariable, impl_expr_display, impl_expr_ops},
+    common::expression::{ExprVariable, impl_expr_ops, impl_expr_display},
     standard_form::variable::StandardVariableKey,
 };
 
@@ -18,8 +18,8 @@ impl fmt::Display for DictionaryVariableKey {
 
 impl ExprVariable for DictionaryVariableKey {}
 
+impl_expr_ops!(DictionaryVariableKey);
 impl_expr_display!(DictionaryVariableKey);
-impl_expr_ops!(DictionaryVariableKey, [f64]);
 
 #[derive(Debug, Clone)]
 pub enum DictionaryVariable {

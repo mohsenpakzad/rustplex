@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::fmt;
+use std::ops::{Neg, Add, AddAssign, Sub, SubAssign, Mul, Div};
 
 /// A linear expression stored as a sorted sparse vector.
 /// Invariants:
@@ -11,7 +12,8 @@ pub struct LinearExpr<T: ExprVariable> {
     pub constant: f64,
 }
 
-pub trait ExprVariable: Clone + Eq + Ord + fmt::Display {}
+/// Trait for types that can be used as variables in a linear expression.
+pub trait ExprVariable: Clone + Copy + Eq + Ord + fmt::Display {}
 
 impl<T: ExprVariable> LinearExpr<T> {
     const TOLERANCE: f64 = 1e-10;
@@ -215,6 +217,380 @@ impl<T: ExprVariable> LinearExpr<T> {
     }
 }
 
+// ============================================================
+//  GENERIC OPERATOR IMPLEMENTATIONS
+// ============================================================
+
+// --- Conversions ---
+
+/// Implements `From<f64>` for `LinearExpr`.
+impl<T: ExprVariable> From<f64> for LinearExpr<T> {
+    fn from(constant: f64) -> Self {
+        LinearExpr::with_constant(constant)
+    }
+}
+
+// --- Negation (-Expr) ---
+
+/// Implements `-Expr`
+impl<T: ExprVariable> Neg for LinearExpr<T> {
+    type Output = Self;
+    fn neg(mut self) -> Self {
+        self.scale(-1.0);
+        self
+    }
+}
+
+/// Implements `-&Expr` (creates new Owned)
+impl<'a, T: ExprVariable> Neg for &'a LinearExpr<T> {
+    type Output = LinearExpr<T>;
+    fn neg(self) -> LinearExpr<T> {
+        let mut new_expr = self.clone();
+        new_expr.scale(-1.0);
+        new_expr
+    }
+}
+
+// --- Addition (Expr + X) ---
+
+/// Implements `Expr + Expr` (Reuse LHS)
+impl<T: ExprVariable> Add<LinearExpr<T>> for LinearExpr<T> {
+    type Output = Self;
+    fn add(mut self, rhs: Self) -> Self {
+        self.add_expr(&rhs);
+        self
+    }
+}
+
+/// Implements `Expr + &Expr` (Reuse LHS)
+impl<'a, T: ExprVariable> Add<&'a LinearExpr<T>> for LinearExpr<T> {
+    type Output = Self;
+    fn add(mut self, rhs: &'a LinearExpr<T>) -> Self {
+        self.add_expr(rhs);
+        self
+    }
+}
+
+/// Implements `Expr + Var`
+impl<T: ExprVariable> Add<T> for LinearExpr<T> {
+    type Output = Self;
+    fn add(mut self, var: T) -> Self {
+        self.add_term(var, 1.0);
+        self
+    }
+}
+
+/// Implements `Expr + f64`
+impl<T: ExprVariable> Add<f64> for LinearExpr<T> {
+    type Output = Self;
+    fn add(mut self, constant: f64) -> Self {
+        self.add_constant(constant);
+        self
+    }
+}
+
+/// Implements `&Expr + f64` (creates new Owned)
+impl<'a, T: ExprVariable> Add<f64> for &'a LinearExpr<T> {
+    type Output = LinearExpr<T>;
+    fn add(self, constant: f64) -> LinearExpr<T> {
+        let mut new_expr = self.clone();
+        new_expr.add_constant(constant);
+        new_expr
+    }
+}
+
+/// Implements `Expr += Expr`
+impl<T: ExprVariable> AddAssign for LinearExpr<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.add_expr(&rhs);
+    }
+}
+
+// --- Subtraction (Expr - X) ---
+
+/// Implements `Expr - Expr` (Reuse LHS)
+impl<T: ExprVariable> Sub<LinearExpr<T>> for LinearExpr<T> {
+    type Output = Self;
+    fn sub(mut self, rhs: Self) -> Self {
+        self.sub_expr(&rhs);
+        self
+    }
+}
+
+/// Implements `Expr - &Expr` (Reuse LHS)
+impl<'a, T: ExprVariable> Sub<&'a LinearExpr<T>> for LinearExpr<T> {
+    type Output = Self;
+    fn sub(mut self, rhs: &'a LinearExpr<T>) -> Self {
+        self.sub_expr(rhs);
+        self
+    }
+}
+
+/// Implements `Expr - Var`
+impl<T: ExprVariable> Sub<T> for LinearExpr<T> {
+    type Output = Self;
+    fn sub(mut self, var: T) -> Self {
+        self.add_term(var, -1.0);
+        self
+    }
+}
+
+/// Implements `Expr - f64`
+impl<T: ExprVariable> Sub<f64> for LinearExpr<T> {
+    type Output = Self;
+    fn sub(mut self, constant: f64) -> Self {
+        self.add_constant(-constant);
+        self
+    }
+}
+
+/// Implements `&Expr - f64` (creates new Owned)
+impl<'a, T: ExprVariable> Sub<f64> for &'a LinearExpr<T> {
+    type Output = LinearExpr<T>;
+    fn sub(self, constant: f64) -> LinearExpr<T> {
+        let mut new_expr = self.clone();
+        new_expr.add_constant(-constant);
+        new_expr
+    }
+}
+
+/// Implements `Expr -= Expr`
+impl<T: ExprVariable> SubAssign for LinearExpr<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.sub_expr(&rhs);
+    }
+}
+
+// --- Multiplication (Expr * f64) ---
+
+/// Implements `Expr * f64`
+impl<T: ExprVariable> Mul<f64> for LinearExpr<T> {
+    type Output = Self;
+    fn mul(mut self, scalar: f64) -> Self {
+        self.scale(scalar);
+        self
+    }
+}
+
+/// Implements `&Expr * f64` (creates new Owned)
+impl<'a, T: ExprVariable> Mul<f64> for &'a LinearExpr<T> {
+    type Output = LinearExpr<T>;
+    fn mul(self, scalar: f64) -> LinearExpr<T> {
+        let mut new_expr = self.clone();
+        new_expr.scale(scalar);
+        new_expr
+    }
+}
+
+// --- Division (Expr / f64) ---
+
+/// Implements `Expr / f64`
+impl<T: ExprVariable> Div<f64> for LinearExpr<T> {
+    type Output = Self;
+    fn div(mut self, scalar: f64) -> Self {
+        self.scale(1.0 / scalar);
+        self
+    }
+}
+
+/// Implements `&Expr / f64` (creates new Owned)
+impl<'a, T: ExprVariable> Div<f64> for &'a LinearExpr<T> {
+    type Output = LinearExpr<T>;
+    fn div(self, scalar: f64) -> LinearExpr<T> {
+        let mut new_expr = self.clone();
+        new_expr.scale(1.0 / scalar);
+        new_expr
+    }
+}
+
+// ============================================================
+//  MACRO: Boilerplate for "Orphan Rule" Cases
+//  Handles interactions where `LinearExpr` is on the Right Hand Side.
+// ============================================================
+
+macro_rules! impl_expr_ops {
+    ($var_type:ty) => {
+        use std::ops::{Add, Sub, Mul, Div, Neg};
+        use crate::common::expression::LinearExpr;
+
+        // --- 1. Variable Conversions ---
+
+        /// Implements `From<Var>` for `LinearExpr`
+        impl From<$var_type> for LinearExpr<$var_type> {
+            fn from(var: $var_type) -> Self {
+                LinearExpr::with_term(var, 1.0)
+            }
+        }
+
+        /// Implements `-Var`
+        impl Neg for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn neg(self) -> Self::Output {
+                LinearExpr::with_term(self, -1.0)
+            }
+        }
+
+        // --- 2. Variable Arithmetic (Var op Var) ---
+
+        /// Implements `Var + Var`
+        impl Add<$var_type> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn add(self, other: Self) -> Self::Output {
+                LinearExpr::with_terms(vec![(self, 1.0), (other, 1.0)])
+            }
+        }
+
+        /// Implements `Var - Var`
+        impl Sub<$var_type> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn sub(self, other: Self) -> Self::Output {
+                LinearExpr::with_terms(vec![(self, 1.0), (other, -1.0)])
+            }
+        }
+
+        // --- 3. Variable/Scalar -> Expression Interactions ---
+        // (Where Expr is on the Right Hand Side)
+
+        /// Implements `Var + Expr`
+        impl Add<LinearExpr<$var_type>> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn add(self, mut expr: LinearExpr<$var_type>) -> Self::Output {
+                expr.add_term(self, 1.0);
+                expr
+            }
+        }
+
+        /// Implements `Var - Expr`
+        impl Sub<LinearExpr<$var_type>> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn sub(self, mut expr: LinearExpr<$var_type>) -> Self::Output {
+                // var - expr => -expr + var
+                expr.scale(-1.0);
+                expr.add_term(self, 1.0);
+                expr
+            }
+        }
+
+        /// Implements `f64 + Expr`
+        impl Add<LinearExpr<$var_type>> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn add(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                expr.add_constant(self);
+                expr
+            }
+        }
+
+        /// Implements `f64 + &Expr`
+        impl<'a> Add<&'a LinearExpr<$var_type>> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn add(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                let mut new_expr = expr.clone();
+                new_expr.add_constant(self);
+                new_expr
+            }
+        }
+
+        /// Implements `f64 - Expr`
+        impl Sub<LinearExpr<$var_type>> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn sub(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                // constant - expr => -expr + constant
+                expr.scale(-1.0);
+                expr.add_constant(self);
+                expr
+            }
+        }
+
+        /// Implements `f64 - &Expr`
+        impl<'a> Sub<&'a LinearExpr<$var_type>> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn sub(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                let mut new_expr = expr.clone();
+                new_expr.scale(-1.0);
+                new_expr.add_constant(self);
+                new_expr
+            }
+        }
+
+        /// Implements `f64 * Expr`
+        impl Mul<LinearExpr<$var_type>> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn mul(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                expr.scale(self);
+                expr
+            }
+        }
+        
+        /// Implements `f64 * &Expr`
+        impl<'a> Mul<&'a LinearExpr<$var_type>> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn mul(self, expr: &'a LinearExpr<$var_type>) -> LinearExpr<$var_type> {
+                let mut new_expr = expr.clone();
+                new_expr.scale(self);
+                new_expr
+            }
+        }
+
+        // --- 4. Scalar Arithmetic (Var op f64) ---
+
+        /// Implements `Var + f64`
+        impl Add<f64> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn add(self, constant: f64) -> LinearExpr<$var_type> {
+                LinearExpr::with_terms_and_constant(vec![(self, 1.0)], constant)
+            }
+        }
+
+        /// Implements `f64 + Var`
+        impl Add<$var_type> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn add(self, var: $var_type) -> LinearExpr<$var_type> {
+                 LinearExpr::with_terms_and_constant(vec![(var, 1.0)], self)
+            }
+        }
+
+        /// Implements `Var - f64`
+        impl Sub<f64> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn sub(self, constant: f64) -> LinearExpr<$var_type> {
+                 LinearExpr::with_terms_and_constant(vec![(self, 1.0)], -constant)
+            }
+        }
+
+        /// Implements `f64 - Var`
+        impl Sub<$var_type> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
+                LinearExpr::with_terms_and_constant(vec![(var, -1.0)], self)
+            }
+        }
+
+        /// Implements `Var * f64`
+        impl Mul<f64> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn mul(self, constant: f64) -> LinearExpr<$var_type> {
+                LinearExpr::with_term(self, constant)
+            }
+        }
+
+        /// Implements `f64 * Var`
+        impl Mul<$var_type> for f64 {
+            type Output = LinearExpr<$var_type>;
+            fn mul(self, var: $var_type) -> LinearExpr<$var_type> {
+                LinearExpr::with_term(var, self)
+            }
+        }
+
+        /// Implements `Var / f64`
+        impl Div<f64> for $var_type {
+            type Output = LinearExpr<$var_type>;
+            fn div(self, constant: f64) -> LinearExpr<$var_type> {
+                LinearExpr::with_term(self, 1.0 / constant)
+            }
+        }
+    };
+}
+
 macro_rules! impl_expr_display {
     ($var_type:ty) => {
         impl fmt::Display for LinearExpr<$var_type> {
@@ -297,372 +673,5 @@ macro_rules! impl_expr_display {
     };
 }
 
-// ============================================================
-//  CORE LOGIC: LinearExpr Operations
-// ============================================================
-// --- Add ---
-// --- Sub ---
-// --- Neg ---
-// ============================================================
-//  INTERACTION: ExprVariable <-> LinearExpr
-// ============================================================
-// --- Expr From Variable ---
-// --- Neg Variable ---
-// --- Var + Var ---
-// --- Var - Var ---
-// --- Var + Expr ---
-// --- Expr + Var ---
-// --- Var - Expr ---
-// --- Expr - Var ---
-// ============================================================
-//  NUMERIC OPERATIONS
-// ============================================================
-// --- Expr From Numeric ---
-// --- Expr + Num ---
-// --- Num + Expr ---
-// --- Expr - Num ---
-// --- Num - Expr ---
-// --- Expr * Num ---
-// --- Num * Expr ---
-// --- Expr / Num ---
-// --- Var + Num ---
-// --- Num + Var ---
-// --- Var - Num ---
-// --- Num - Var ---
-// --- Var * Num ---
-// --- Num * Var ---
-// --- Var / Num ---
-macro_rules! impl_expr_ops {
-    ($var_type:ty, [$($num_type:ty),* $(,)?]) => {
-        use std::ops::{Add, Div, Mul, Neg, Sub};
-        use crate::common::expression::LinearExpr;
-
-        // ============================================================
-        //  HELPER MACROS: Automatic Reference Forwarding
-        // ============================================================
-
-        // Generates implementations for: &LHS + &RHS, &LHS + RHS, LHS + &RHS
-        // by forwarding them to the value-based implementation: LHS + RHS
-        macro_rules! forward_binop {
-            (impl $trait:ident, $fn:ident for $lhs:ty, $rhs:ty) => {
-                // &LHS op &RHS
-                impl<'a, 'b> $trait<&'b $rhs> for &'a $lhs {
-                    type Output = LinearExpr<$var_type>;
-                    fn $fn(self, other: &'b $rhs) -> Self::Output {
-                        self.clone().$fn(other.clone())
-                    }
-                }
-                // &LHS op RHS
-                impl<'a> $trait<$rhs> for &'a $lhs {
-                    type Output = LinearExpr<$var_type>;
-                    fn $fn(self, other: $rhs) -> Self::Output {
-                        self.clone().$fn(other)
-                    }
-                }
-                // LHS op &RHS
-                impl<'a> $trait<&'a $rhs> for $lhs {
-                    type Output = LinearExpr<$var_type>;
-                    fn $fn(self, other: &'a $rhs) -> Self::Output {
-                        self.$fn(other.clone())
-                    }
-                }
-            };
-        }
-
-        // Generates implementations for: -&val
-        // by forwarding to: -val
-        macro_rules! forward_unop {
-            (impl $trait:ident, $fn:ident for $target:ty) => {
-                impl<'a> $trait for &'a $target {
-                    type Output = LinearExpr<$var_type>;
-                    fn $fn(self) -> Self::Output {
-                        self.clone().$fn()
-                    }
-                }
-            };
-        }
-
-        // ============================================================
-        //  CORE LOGIC: LinearExpr Operations
-        // ============================================================
-
-        // --- Add ---
-        impl Add<LinearExpr<$var_type>> for LinearExpr<$var_type> {
-            type Output = Self;
-            fn add(mut self, other: Self) -> Self {
-                self.add_expr(&other);
-                self
-            }
-        }
-        forward_binop!(impl Add, add for LinearExpr<$var_type>, LinearExpr<$var_type>);
-
-        // --- Sub ---
-        impl Sub<LinearExpr<$var_type>> for LinearExpr<$var_type> {
-            type Output = Self;
-            fn sub(mut self, other: Self) -> Self {
-                self.sub_expr(&other);
-                self
-            }
-        }
-        forward_binop!(impl Sub, sub for LinearExpr<$var_type>, LinearExpr<$var_type>);
-
-        // --- Neg ---
-        impl Neg for LinearExpr<$var_type> {
-            type Output = Self;
-            fn neg(mut self) -> Self {
-                self.scale(-1.0);
-                self
-            }
-        }
-        forward_unop!(impl Neg, neg for LinearExpr<$var_type>);
-
-        // ============================================================
-        //  INTERACTION: ExprVariable <-> LinearExpr
-        // ============================================================
-
-        // --- Expr From Variable ---
-        impl From<$var_type> for LinearExpr<$var_type> {
-            fn from(var: $var_type) -> Self {
-                LinearExpr::with_term(var, 1.0)
-            }
-        }
-        
-        // --- From &Variable ---
-        impl<'a> From<&'a $var_type> for LinearExpr<$var_type> {
-            fn from(var: &'a $var_type) -> Self {
-                LinearExpr::with_term(var.clone(), 1.0)
-            }
-        }
-
-        // --- Neg Variable ---
-        impl Neg for $var_type {
-            type Output = LinearExpr<$var_type>;
-            fn neg(self) -> Self::Output {
-                LinearExpr::with_term(self, -1.0)
-            }
-        }
-        forward_unop!(impl Neg, neg for $var_type);
-
-        // --- Var + Var ---
-        impl Add<$var_type> for $var_type {
-            type Output = LinearExpr<$var_type>;
-            fn add(self, other: Self) -> Self::Output {
-                let mut terms = Vec::with_capacity(2);
-                terms.push((self, 1.0));
-                terms.push((other, 1.0));
-                LinearExpr::with_terms(terms)
-            }
-        }
-        forward_binop!(impl Add, add for $var_type, $var_type);
-
-        // --- Var - Var ---
-        impl Sub<$var_type> for $var_type {
-            type Output = LinearExpr<$var_type>;
-            fn sub(self, other: Self) -> Self::Output {
-                let mut terms = Vec::with_capacity(2);
-                terms.push((self, 1.0));
-                terms.push((other, -1.0));
-                LinearExpr::with_terms(terms)
-            }
-        }
-        forward_binop!(impl Sub, sub for $var_type, $var_type);
-
-        // --- Var + Expr ---
-        impl Add<LinearExpr<$var_type>> for $var_type {
-            type Output = LinearExpr<$var_type>;
-            fn add(self, mut expr: LinearExpr<$var_type>) -> Self::Output {
-                expr.add_term(self, 1.0);
-                expr
-            }
-        }
-        forward_binop!(impl Add, add for $var_type, LinearExpr<$var_type>);
-
-        // --- Expr + Var ---
-        impl Add<$var_type> for LinearExpr<$var_type> {
-            type Output = Self;
-            fn add(mut self, var: $var_type) -> Self {
-                self.add_term(var, 1.0);
-                self
-            }
-        }
-        forward_binop!(impl Add, add for LinearExpr<$var_type>, $var_type);
-
-        // --- Var - Expr ---
-        // Logic: Var - Expr  =>  Var + (-1 * Expr)
-        impl Sub<LinearExpr<$var_type>> for $var_type {
-            type Output = LinearExpr<$var_type>;
-            fn sub(self, mut expr: LinearExpr<$var_type>) -> Self::Output {
-                expr.scale(-1.0);
-                expr.add_term(self, 1.0);
-                expr
-            }
-        }
-        forward_binop!(impl Sub, sub for $var_type, LinearExpr<$var_type>);
-
-        // --- Expr - Var ---
-        impl Sub<$var_type> for LinearExpr<$var_type> {
-            type Output = Self;
-            fn sub(mut self, var: $var_type) -> Self {
-                self.add_term(var, -1.0);
-                self
-            }
-        }
-        forward_binop!(impl Sub, sub for LinearExpr<$var_type>, $var_type);
-
-
-        // ============================================================
-        //  NUMERIC OPERATIONS (Generics)
-        // ============================================================
-        
-        $(
-            // --- Expr From Numeric ---
-            impl From<$num_type> for LinearExpr<$var_type> {
-                fn from(constant: $num_type) -> Self {
-                    LinearExpr::with_constant(constant as f64)
-                }
-            }
-
-            // --- Expr + Num ---
-            impl Add<$num_type> for LinearExpr<$var_type> {
-                type Output = Self;
-                fn add(mut self, constant: $num_type) -> Self {
-                    self.constant += constant as f64;
-                    self
-                }
-            }
-            forward_binop!(impl Add, add for LinearExpr<$var_type>, $num_type);
-
-            // --- Num + Expr ---
-            impl Add<LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-                fn add(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    expr.constant += self as f64;
-                    expr
-                }
-            }
-            forward_binop!(impl Add, add for $num_type, LinearExpr<$var_type>);
-
-            // --- Expr - Num ---
-            impl Sub<$num_type> for LinearExpr<$var_type> {
-                type Output = Self;
-                fn sub(mut self, constant: $num_type) -> Self {
-                    self.constant -= constant as f64;
-                    self
-                }
-            }
-            forward_binop!(impl Sub, sub for LinearExpr<$var_type>, $num_type);
-
-            // --- Num - Expr ---
-            impl Sub<LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-                fn sub(self, mut expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    expr.scale(-1.0);
-                    expr.constant += self as f64;
-                    expr
-                }
-            }
-            forward_binop!(impl Sub, sub for $num_type, LinearExpr<$var_type>);
-
-            // --- Expr * Num ---
-            impl Mul<$num_type> for LinearExpr<$var_type> {
-                type Output = Self;
-                fn mul(mut self, constant: $num_type) -> Self {
-                    self.scale(constant as f64);
-                    self
-                }
-            }
-            forward_binop!(impl Mul, mul for LinearExpr<$var_type>, $num_type);
-
-            // --- Num * Expr ---
-            impl Mul<LinearExpr<$var_type>> for $num_type {
-                type Output = LinearExpr<$var_type>;
-                fn mul(self, expr: LinearExpr<$var_type>) -> LinearExpr<$var_type> {
-                    expr * self
-                }
-            }
-            forward_binop!(impl Mul, mul for $num_type, LinearExpr<$var_type>);
-
-            // --- Expr / Num ---
-            impl Div<$num_type> for LinearExpr<$var_type> {
-                type Output = Self;
-                fn div(mut self, constant: $num_type) -> Self {
-                    self.scale(1.0 / (constant as f64));
-                    self
-                }
-            }
-            forward_binop!(impl Div, div for LinearExpr<$var_type>, $num_type);
-
-            // --- Var + Num ---
-            impl Add<$num_type> for $var_type {
-                type Output = LinearExpr<$var_type>;
-                fn add(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = Vec::with_capacity(1);
-                    terms.push((self, 1.0));
-                    LinearExpr::with_terms_and_constant(terms, constant as f64)
-                }
-            }
-            forward_binop!(impl Add, add for $var_type, $num_type);
-
-            // --- Num + Var ---
-            impl Add<$var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-                fn add(self, var: $var_type) -> LinearExpr<$var_type> {
-                    var + self
-                }
-            }
-            forward_binop!(impl Add, add for $num_type, $var_type);
-
-            // --- Var - Num ---
-            impl Sub<$num_type> for $var_type {
-                type Output = LinearExpr<$var_type>;
-                fn sub(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    let mut terms = Vec::with_capacity(1);
-                    terms.push((self, 1.0));
-                    LinearExpr::with_terms_and_constant(terms, -(constant as f64))
-                }
-            }
-            forward_binop!(impl Sub, sub for $var_type, $num_type);
-
-            // --- Num - Var ---
-            impl Sub<$var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-                fn sub(self, var: $var_type) -> LinearExpr<$var_type> {
-                    let mut terms = Vec::with_capacity(1);
-                    terms.push((var, -1.0));
-                    LinearExpr::with_terms_and_constant(terms, self as f64)
-                }
-            }
-            forward_binop!(impl Sub, sub for $num_type, $var_type);
-
-            // --- Var * Num ---
-            impl Mul<$num_type> for $var_type {
-                type Output = LinearExpr<$var_type>;
-                fn mul(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    LinearExpr::with_term(self, constant as f64)
-                }
-            }
-            forward_binop!(impl Mul, mul for $var_type, $num_type);
-
-            // --- Num * Var ---
-            impl Mul<$var_type> for $num_type {
-                type Output = LinearExpr<$var_type>;
-                fn mul(self, var: $var_type) -> LinearExpr<$var_type> {
-                    LinearExpr::with_term(var, self as f64)
-                }
-            }
-            forward_binop!(impl Mul, mul for $num_type, $var_type);
-
-            // --- Var / Num ---
-            impl Div<$num_type> for $var_type {
-                type Output = LinearExpr<$var_type>;
-                fn div(self, constant: $num_type) -> LinearExpr<$var_type> {
-                    LinearExpr::with_term(self, 1.0 / (constant as f64))
-                }
-            }
-            forward_binop!(impl Div, div for $var_type, $num_type);
-        )*
-    };
-}
-
-pub(crate) use impl_expr_display;
 pub(crate) use impl_expr_ops;
+pub(crate) use impl_expr_display;

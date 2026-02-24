@@ -2,7 +2,7 @@ use std::fmt;
 use std::ops::RangeInclusive;
 use slotmap::{new_key_type, DenseSlotMap};
 
-use crate::common::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
+use crate::common::expression::{impl_expr_ops, impl_expr_display, ExprVariable};
 
 new_key_type! {
     pub struct VariableKey;
@@ -17,8 +17,8 @@ impl fmt::Display for VariableKey {
 
 impl ExprVariable for VariableKey {}
 
+impl_expr_ops!(VariableKey);
 impl_expr_display!(VariableKey);
-impl_expr_ops!(VariableKey, [f64, i32]);
 
 #[derive(Debug, Clone, Copy)]
 pub enum VariableType {
