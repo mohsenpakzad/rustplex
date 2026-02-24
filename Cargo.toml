@@ -1,7 +1,8 @@
 [package]
 name = "rustplex"
 version = "0.2.0"
-edition = "2024"
+edition = "2021"
+rust-version = "1.62"
 license = "MIT OR Apache-2.0"
 description = "A linear programming solver based on the Simplex algorithm for Rust"
 authors = ["Mohsen Pakzad <mohsen.pakzad99@gmail.com>"]
