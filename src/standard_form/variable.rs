@@ -1,5 +1,5 @@
 use std::fmt;
-use slotmap::{new_key_type, DenseSlotMap};
+use slotmap::new_key_type;
 
 use crate::common::expression::{impl_expr_display, impl_expr_ops, ExprVariable};
 
@@ -57,46 +57,5 @@ impl fmt::Display for StandardVariable {
             "StandardVariable({})",
             self.name()
         )
-    }
-}
-
-// --- Standard Variable Builder ---
-
-/// A builder for creating and configuring a new standard variable.
-pub struct StandardVariableBuilder<'a> {
-    arena: &'a mut DenseSlotMap<StandardVariableKey, StandardVariable>,
-    data: StandardVariable,
-}
-
-impl<'a> StandardVariableBuilder<'a> {
-    pub(crate) fn new(arena: &'a mut DenseSlotMap<StandardVariableKey, StandardVariable>) -> Self {
-        Self {
-            arena,
-            data: StandardVariable::default(),
-        }
-    }
-
-    /// Sets the name of the standard variable.
-    pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.data.name = Some(name.into());
-        self
-    }
-
-    // --- Terminating Methods ---
-
-    /// Finalizes the variable creation.
-    ///
-    /// Since Standard Variables are always continuous, this method acts as the terminator.
-    pub fn continuous(self) -> StandardVariableKey {
-        self.finish()
-    }
-
-    /// Alias for `continuous()`.
-    pub fn real(self) -> StandardVariableKey {
-        self.continuous()
-    }
-
-    fn finish(self) -> StandardVariableKey {
-        self.arena.insert(self.data)
     }
 }

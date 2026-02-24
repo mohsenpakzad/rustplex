@@ -10,9 +10,9 @@ use crate::{
         simplex::solver::SimplexSolver,
     },
     standard_form::{
-        constraint::{StandardConstraint, StandardConstraintBuilder, StandardConstraintKey},
+        constraint::{StandardConstraint, StandardConstraintKey},
         objective::StandardObjective,
-        variable::{StandardVariable, StandardVariableBuilder, StandardVariableKey}
+        variable::{StandardVariable, StandardVariableKey}
     }
 };
 
@@ -38,16 +38,6 @@ impl StandardModel {
     pub fn with_config(mut self, config: SolverConfig) -> Self {
         self.config = config;
         self
-    }
-
-    /// Add a new non-negative variable
-    pub fn build_variable(&mut self) -> StandardVariableBuilder<'_> {
-        StandardVariableBuilder::new(&mut self.variables)
-    }
-
-    /// Add a constraint in standard form: lhs ≤ rhs_constant
-    pub fn build_constraint(&mut self, lhs: LinearExpr<StandardVariableKey>) -> StandardConstraintBuilder<'_> {
-        StandardConstraintBuilder::new(&mut self.constraints, lhs)
     }
 
     pub fn add_variable(&mut self, var: StandardVariable) -> StandardVariableKey {

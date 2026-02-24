@@ -1,5 +1,5 @@
 use std::fmt;
-use slotmap::{new_key_type, DenseSlotMap};
+use slotmap::new_key_type;
 
 use crate::common::expression::LinearExpr;
 use crate::standard_form::variable::StandardVariableKey;
@@ -61,52 +61,5 @@ impl fmt::Display for StandardConstraint {
             self.lhs,
             self.rhs
         )
-    }
-}
-
-// --- Standard Constraint Builder ---
-
-/// A builder for creating and configuring a new standard constraint.
-pub struct StandardConstraintBuilder<'a> {
-    arena: &'a mut DenseSlotMap<StandardConstraintKey, StandardConstraint>,
-    lhs: LinearExpr<StandardVariableKey>,
-    name: Option<String>,
-}
-
-impl<'a> StandardConstraintBuilder<'a> {
-    pub(crate) fn new(
-        arena: &'a mut DenseSlotMap<StandardConstraintKey, StandardConstraint>, 
-        lhs: LinearExpr<StandardVariableKey>
-    ) -> Self {
-        Self {
-            arena,
-            lhs,
-            name: None,
-        }
-    }
-
-    /// Sets the name of the constraint.
-    pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.name = Some(name.into());
-        self
-    }
-
-    // --- Terminating Methods ---
-
-    /// Creates a Less Than or Equal constraint: `LHS <= RHS`.
-    ///
-    /// This is the only allowed relation in the Standard Model.
-    pub fn less_than_or_equal(self, rhs: f64) -> StandardConstraintKey {
-        let data = StandardConstraint {
-            name: self.name,
-            lhs: self.lhs,
-            rhs,
-        };
-        self.arena.insert(data)
-    }
-
-    /// Alias for `less_than_or_equal`.
-    pub fn le(self, rhs: f64) -> StandardConstraintKey {
-        self.less_than_or_equal(rhs)
     }
 }
