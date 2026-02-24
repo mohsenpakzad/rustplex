@@ -72,7 +72,7 @@ impl SimplexSolver {
 
     fn needs_phase_one(&self) -> bool {
         self.slack_dict
-            .entries()
+            .rows()
             .values()
             .any(|entry| entry.value() < -self.config.tolerance)
     }
@@ -94,7 +94,7 @@ impl SimplexSolver {
         // We look for an entry where the basic variable is 'Aux'
         let aux_entry = self
             .slack_dict
-            .entries()
+            .rows()
             .iter()
             .find(|(_, entry)| entry.basic_var() == aux_var);
 
@@ -123,7 +123,7 @@ impl SimplexSolver {
         self.slack_dict.remove_var_from_all_entries(aux_var);
 
         // 3. Restore original objective
-        self.slack_dict.entries().values().for_each(|entry| {
+        self.slack_dict.rows().values().for_each(|entry| {
             original_objective.replace_var_with_expr(entry.basic_var(), &entry.expr());
         });
         self.slack_dict.set_objective(original_objective);
@@ -170,7 +170,7 @@ impl SimplexSolver {
 
     fn find_leaving_variable(&self, entering: &DictionaryVariableKey) -> Option<DictionaryRowKey> {
         self.slack_dict
-            .entries()
+            .rows()
             .iter()
             .filter_map(|(entry_key, entry)| {
                 let coefficient = entry.non_basic_coefficient(entering);
@@ -189,7 +189,7 @@ impl SimplexSolver {
 
     fn find_phase1_initial_leaving_variable(&self) -> DictionaryRowKey {
         self.slack_dict
-            .entries()
+            .rows()
             .iter()
             .min_by(|(_, e1), (_, e2)| e1.value().total_cmp(&e2.value()))
             .map(|(entry, _)| entry)

@@ -17,7 +17,7 @@ use crate::{
 pub struct SlackDictionary {
     variables: DenseSlotMap<DictionaryVariableKey, DictionaryVariable>,
     objective: LinearExpr<DictionaryVariableKey>,
-    entries: DenseSlotMap<DictionaryRowKey, DictionaryRow>,
+    rows: DenseSlotMap<DictionaryRowKey, DictionaryRow>,
     mapping: SecondaryMap<StandardVariableKey, DictionaryVariableKey>,
 }
 
@@ -52,7 +52,7 @@ impl SlackDictionary {
         Self {
             variables,
             objective,
-            entries,
+            rows: entries,
             mapping,
         }
     }
@@ -77,28 +77,17 @@ impl SlackDictionary {
         &self.objective
     }
 
-    pub fn entries(&self) -> &DenseSlotMap<DictionaryRowKey, DictionaryRow> {
-        &self.entries
-    }
-
-    pub fn mapping(&self) -> &SecondaryMap<StandardVariableKey, DictionaryVariableKey> {
-        &self.mapping
+    pub fn rows(&self) -> &DenseSlotMap<DictionaryRowKey, DictionaryRow> {
+        &self.rows
     }
 
     pub fn objective_value(&self) -> f64 {
         self.objective.constant
     }
 
-    pub fn basic_values(&self) -> SecondaryMap<DictionaryVariableKey, f64> {
-        self.entries
-            .values()
-            .map(|entry| (entry.basic_var().clone(), entry.value()))
-            .collect()
-    }
-
     pub fn std_values(&self) -> SecondaryMap<StandardVariableKey, f64> {
         let basic_to_entry = self
-            .entries
+            .rows
             .values()
             .map(|entry| (entry.basic_var(), entry.clone()))
             .collect::<SecondaryMap<_, _>>();
@@ -118,24 +107,24 @@ impl SlackDictionary {
     }
 
     pub fn add_var_to_all_entries(&mut self, var: DictionaryVariableKey, coefficient: f64) {
-        for entry in self.entries.values_mut() {
+        for entry in self.rows.values_mut() {
             entry.add_non_basic(var.clone(), coefficient);
         }
     }
 
     pub fn remove_var_from_all_entries(&mut self, var: DictionaryVariableKey) {
-        for entry in self.entries.values_mut() {
+        for entry in self.rows.values_mut() {
             entry.remove_non_basic(var.clone());
         }
     }
 
     pub fn remove_entry(&mut self, key: DictionaryRowKey) {
-        self.entries.remove(key);
+        self.rows.remove(key);
     }
 
     pub fn pivot(&mut self, entering: DictionaryVariableKey, leaving_key: DictionaryRowKey) {
         // Get a mutable reference to the leaving entry in the arena and update its basis
-        let leaving_entry = self.entries.get_mut(leaving_key).unwrap();
+        let leaving_entry = self.rows.get_mut(leaving_key).unwrap();
         leaving_entry.switch_to_basic(entering);
         
         // Clone the properties we need to avoid borrow-checker conflicts in the next loop
@@ -143,7 +132,7 @@ impl SlackDictionary {
         let new_basic_var = leaving_entry.basic_var();
 
         // Iterate over ALL entries mutably to substitute the expression
-        for entry in self.entries.values_mut() {
+        for entry in self.rows.values_mut() {
             // We compare basic variables to identify if it's the same row.
             if entry.basic_var() != new_basic_var {
                 entry.replace_non_basic_with_expr(entering, &leaving_expr);
@@ -174,7 +163,7 @@ impl fmt::Display for SlackDictionary {
         writeln!(f, "Objective = {}", self.objective)?;
 
         // Display the entires
-        for entry in self.entries.values() {
+        for entry in self.rows.values() {
             writeln!(f, "{}", entry)?;
         }
         Ok(())
